@@ -1,6 +1,6 @@
-# Эксплуатация и релизы
+# Operations and Releases
 
-## Production build
+## Production Build
 
 ```bash
 npm ci
@@ -9,66 +9,63 @@ npm run check
 npm run build
 ```
 
-Результат лежит в `build/` (статический сайт).
+Output is generated into `build/` (static app bundle).
 
-## Деплой-модель
+## Deployment Model
 
-Проект использует `@sveltejs/adapter-static` и `fallback: index.html`.
+This project uses `@sveltejs/adapter-static` with `fallback: index.html`.
 
-Практически это значит:
+Implications:
 
-- можно размещать на любом static hosting;
-- роутинг должен уметь fallback на `index.html` для SPA-навигации.
+- Deploy to any static hosting/CDN.
+- Configure route fallback to `index.html` for SPA navigation.
 
-## Runtime-конфигурация
+## Runtime Configuration
 
-Сейчас endpoint WebSocket вводится пользователем в `PairingScreen`.
-Дефолт: `ws://127.0.0.1:32123/ws`.
+WebSocket endpoint is currently user-entered in `PairingScreen`.
+Default value: `ws://127.0.0.1:32123/ws`.
 
-Если нужен другой дефолт:
+To change default endpoint, update initial `url` in `src/lib/components/PairingScreen.svelte`.
 
-- измените начальное значение `url` в `src/lib/components/PairingScreen.svelte`.
+## Sensitive Data Handling
 
-## Хранение чувствительных данных
-
-Ключ `nullclaw_ui_auth_v1` в localStorage содержит:
+`nullclaw_ui_auth_v1` in local storage includes:
 
 - endpoint URL
 - `access_token`
 - `shared_key` (base64url)
 - `expires_at`
 
-Практики безопасности:
+Security expectations:
 
-- очищать запись при logout и `unauthorized`;
-- учитывать TTL;
-- не использовать этот UI в недоверенных браузерных окружениях.
+- clear on logout and `unauthorized`
+- enforce TTL expiration behavior
+- avoid running in untrusted browser environments
 
-## Release checklist
+## Release Checklist
 
-1. Обновить документацию под фактическое поведение.
-2. Прогнать `test` + `check`.
-3. Проверить pairing, chat, approvals, logout вручную.
-4. Собрать build.
-5. Сверить, что в UI-диагностике отображаются корректные параметры соединения и E2E.
+1. Ensure docs match current runtime behavior.
+2. Run `npm run test` and `npm run check`.
+3. Manual verification of pairing, chat, approvals, logout.
+4. Build production bundle.
+5. Confirm diagnostics panel reflects actual E2E/runtime details.
 
 ## Troubleshooting
 
-### Pairing не стартует
+### Pairing does not start
 
-- Проверьте корректность WebSocket URL.
-- Убедитесь, что backend доступен из браузера (network/CORS/proxy).
-- Проверьте формат PIN: ровно 6 цифр.
+- Verify WebSocket endpoint format.
+- Ensure backend is reachable from browser/network.
+- Ensure PIN is exactly 6 digits.
 
-### Сообщения не отправляются
+### Messages are not sent
 
-- Клиент не в состоянии `paired/chatting`.
-- Сокет закрыт или backend отверг токен.
-- Проверьте error bar внизу chat-экрана.
+- Client is not in `paired`/`chatting` state.
+- Socket was closed or token was rejected.
+- Check error bar in chat screen.
 
-### Сессия не восстанавливается после reload
+### Session does not restore after reload
 
-- Запись auth истекла (`expires_at`).
-- Shared key в storage повреждён.
-- Backend не принимает сохранённый токен (получаете `unauthorized`).
-
+- Stored auth expired (`expires_at`).
+- Shared key in storage is invalid.
+- Backend rejects saved token (`unauthorized`).

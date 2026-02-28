@@ -1,8 +1,8 @@
-# Тестирование
+# Testing
 
-Проект использует `Vitest` (environment `jsdom`) и `@testing-library/svelte`.
+This project uses `Vitest` (`jsdom` environment) and `@testing-library/svelte`.
 
-## Команды
+## Commands
 
 ```bash
 npm run test
@@ -10,74 +10,73 @@ npm run test:watch
 npm run check
 ```
 
-## Что покрыто сейчас
+## Current Coverage
 
 ### Protocol layer
 
-- `src/lib/protocol/types.test.ts`:
-  - корректность envelope builders.
-- `src/lib/protocol/e2e.test.ts`:
-  - генерация ключей;
-  - derivation;
-  - encrypt/decrypt roundtrip;
-  - ошибочный decrypt на неправильном ключе.
-- `src/lib/protocol/client.test.ts`:
-  - connect/pairing/send;
-  - обработка `pairing_result`, `assistant_final`;
-  - decrypt `assistant_chunk`;
-  - reconnect/backoff;
-  - защита от duplicate connect и отправки при закрытом сокете.
+- `src/lib/protocol/types.test.ts`
+  - envelope constructor correctness
+- `src/lib/protocol/e2e.test.ts`
+  - key generation
+  - shared-key derivation
+  - encrypt/decrypt roundtrip
+  - decrypt failure with wrong key
+- `src/lib/protocol/client.test.ts`
+  - connect/pair/send flows
+  - `pairing_result`, `assistant_final` handling
+  - E2E decrypt path for `assistant_chunk`
+  - reconnect/backoff behavior
+  - guards against duplicate connect and send-on-closed-socket
 
-### Session/persistence layer
+### Session and persistence layer
 
-- `src/lib/stores/session.test.ts`:
-  - стриминг chunk/final;
-  - legacy fallback;
-  - tool/approval корреляция;
-  - обработка ошибок.
-- `src/lib/session/auth-storage.test.ts`:
-  - save/load/clear;
-  - очистка malformed и expired данных.
-- `src/lib/session/connection-controller.test.ts`:
-  - восстановление сессии;
-  - локальные ошибки отправки.
+- `src/lib/stores/session.test.ts`
+  - streaming chunk/final behavior
+  - legacy content fallback
+  - tool/approval correlation
+  - error handling
+- `src/lib/session/auth-storage.test.ts`
+  - save/load/clear flows
+  - malformed/expired payload cleanup
+- `src/lib/session/connection-controller.test.ts`
+  - session restore
+  - local send-error behavior
 
 ### UI layer
 
-- `src/lib/components/PairingScreen.test.ts`:
-  - нормализация PIN;
-  - submit-валидация.
-- `src/lib/components/StatusBar.test.ts`:
-  - отображение endpoint/session;
-  - theme/effects/logout действия.
-- `src/lib/theme.test.ts`, `src/lib/ui/preferences.test.ts`:
-  - темы, классы body, preferences persistence.
+- `src/lib/components/PairingScreen.test.ts`
+  - PIN sanitization
+  - submit validation
+- `src/lib/components/StatusBar.test.ts`
+  - endpoint/session rendering
+  - theme/effects/logout callbacks
+- `src/lib/theme.test.ts`, `src/lib/ui/preferences.test.ts`
+  - theme/effects persistence and body class behavior
 
-## Принципы написания тестов
+## Testing Principles
 
-- Один тест — одна поведенческая гарантия.
-- Не тестировать private implementation details, тестировать observable behavior.
-- Для transport использовать mock WebSocket.
-- Для localStorage использовать in-memory mock Storage.
-- Для UI — user-level действия через Testing Library (`fireEvent`, `user-event`).
+- One test should assert one behavioral guarantee.
+- Prefer observable behavior over private implementation details.
+- Use mocked WebSocket for transport tests.
+- Use in-memory mocked `Storage` for persistence tests.
+- Use user-level interactions for component tests.
 
-## Рекомендуемые расширения покрытия
+## Recommended Next Coverage
 
-- Компонентные тесты для:
+- Component tests for:
   - `ChatScreen`
   - `MessageBubble`
   - `ToolCallBlock`
   - `ApprovalPrompt`
-- Интеграционные smoke-тесты полного флоу pairing -> chatting.
-- E2E браузерные тесты (например Playwright) поверх mock backend.
+- Full flow integration smoke test: pairing -> chatting.
+- Optional browser E2E coverage (for example with Playwright + mock backend).
 
-## Минимальный чек перед merge
+## Minimum Pre-Merge Check
 
 1. `npm run test`
 2. `npm run check`
-3. Ручной smoke:
-   - pairing c валидным PIN
-   - отправка сообщения
-   - обработка `error`
-   - logout и повторное подключение
-
+3. Manual smoke:
+   - successful pairing
+   - send message
+   - error handling
+   - logout and reconnect

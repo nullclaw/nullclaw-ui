@@ -1,102 +1,102 @@
 # nullclaw-ui
 
-Веб-интерфейс для `nullclaw` в стиле терминала. Клиент работает поверх WebSocket и протокола `WebChannel v1`, поддерживает PIN-pairing, потоковые ответы ассистента, tool-вызовы, запросы подтверждения и end-to-end шифрование.
+A terminal-style web interface for `nullclaw`.
+The app uses WebSocket + `WebChannel v1` and supports PIN pairing, streaming assistant responses, tool-call rendering, approval prompts, and end-to-end encryption.
 
-## Что умеет интерфейс
+## Features
 
-- Подключение к агенту через `ws://...` endpoint и 6-значный pairing PIN.
-- E2E-сессия: X25519 (обмен ключами) + ChaCha20-Poly1305 (шифрование сообщений).
-- Потоковый чат (`assistant_chunk` -> `assistant_final`).
-- Отображение `tool_call` / `tool_result`.
-- Подтверждения действий (`approval_request` -> `approval_response`).
-- Автовосстановление сессии из `localStorage` с TTL токена.
-- Смена темы и визуальных эффектов с персистом настроек.
+- Connect to an agent via `ws://...` endpoint and a 6-digit pairing PIN.
+- E2E session bootstrap: X25519 key exchange + ChaCha20-Poly1305 message encryption.
+- Streaming assistant UI (`assistant_chunk` -> `assistant_final`).
+- Tool timeline support (`tool_call` / `tool_result`).
+- Approval flow support (`approval_request` -> `approval_response`).
+- Session restore from `localStorage` with token TTL.
+- Theme and visual-effects preferences persisted locally.
 
-## Технологии
+## Stack
 
-- `Svelte 5` (runes API)
+- `Svelte 5` (Runes API)
 - `SvelteKit 2`
 - `Vite 7`
 - `Vitest 4` + `@testing-library/svelte`
-- `@noble/ciphers` для ChaCha20-Poly1305
+- `@noble/ciphers` for ChaCha20-Poly1305
 
-Проект собирается как статический сайт (`adapter-static`, `fallback: index.html`, `ssr = false`).
+The app is built as a static site (`adapter-static`, `fallback: index.html`, `ssr = false`).
 
-## Быстрый старт
+## Quick Start
 
-### 1) Требования
+### 1) Requirements
 
-- `Node.js` 20+ (рекомендуется LTS)
+- `Node.js` 20+ (LTS recommended)
 - `npm` 10+
 
-### 2) Установка
+### 2) Install
 
 ```bash
 npm install
 ```
 
-### 3) Запуск в dev-режиме
+### 3) Run locally
 
 ```bash
 npm run dev
 ```
 
-Откройте `http://localhost:5173`.
+Open `http://localhost:5173`.
 
-### 4) Подключение к агенту
+### 4) Pair with an agent
 
-1. Введите endpoint WebSocket (по умолчанию: `ws://127.0.0.1:32123/ws`).
-2. Введите 6-значный pairing PIN.
-3. После `pairing_result` интерфейс переключится в chat-режим.
+1. Enter the WebSocket endpoint (default: `ws://127.0.0.1:32123/ws`).
+2. Enter a 6-digit pairing PIN.
+3. After `pairing_result`, the UI switches to chat mode.
 
-## Скрипты
+## Scripts
 
-- `npm run dev` — локальная разработка.
-- `npm run build` — production build.
-- `npm run preview` — предпросмотр production-сборки.
-- `npm run test` — запуск тестов Vitest.
-- `npm run test:watch` — тесты в watch-режиме.
-- `npm run check` — `svelte-kit sync` + `svelte-check`.
-- `npm run check:watch` — `svelte-check` в watch-режиме.
+- `npm run dev` - local development server.
+- `npm run build` - production build.
+- `npm run preview` - preview built app.
+- `npm run test` - run Vitest suite.
+- `npm run test:watch` - run Vitest in watch mode.
+- `npm run check` - `svelte-kit sync` + `svelte-check`.
+- `npm run check:watch` - `svelte-check` in watch mode.
 
-## Архитектура (кратко)
+## Architecture (Short)
 
-- [`src/routes/+page.svelte`](src/routes/+page.svelte): composition root экрана.
-- [`src/lib/session/connection-controller.svelte.ts`](src/lib/session/connection-controller.svelte.ts): оркестрация подключения, pairing, восстановления и logout.
-- [`src/lib/protocol/client.svelte.ts`](src/lib/protocol/client.svelte.ts): WebSocket-клиент, валидация envelope, reconnect.
-- [`src/lib/stores/session.svelte.ts`](src/lib/stores/session.svelte.ts): состояние timeline (messages/tool calls/approvals/errors).
-- [`src/lib/protocol/e2e.ts`](src/lib/protocol/e2e.ts): криптография.
-- [`src/lib/ui/preferences.ts`](src/lib/ui/preferences.ts) + [`src/lib/theme.ts`](src/lib/theme.ts): UI-предпочтения.
+- [`src/routes/+page.svelte`](src/routes/+page.svelte): page composition root.
+- [`src/lib/session/connection-controller.svelte.ts`](src/lib/session/connection-controller.svelte.ts): pairing/session orchestration, restore, logout.
+- [`src/lib/protocol/client.svelte.ts`](src/lib/protocol/client.svelte.ts): WebSocket client, envelope validation, reconnect.
+- [`src/lib/stores/session.svelte.ts`](src/lib/stores/session.svelte.ts): timeline state (messages/tool calls/approvals/errors).
+- [`src/lib/protocol/e2e.ts`](src/lib/protocol/e2e.ts): cryptography.
+- [`src/lib/ui/preferences.ts`](src/lib/ui/preferences.ts) + [`src/lib/theme.ts`](src/lib/theme.ts): UI preferences.
 
-Детально:
+Detailed docs:
 
-- [Архитектура](docs/architecture.md)
-- [Протокол и E2E](docs/protocol.md)
-- [Разработка](docs/development.md)
-- [Тестирование](docs/testing.md)
-- [Эксплуатация и релизы](docs/operations.md)
+- [Architecture](docs/architecture.md)
+- [Protocol and E2E](docs/protocol.md)
+- [Development](docs/development.md)
+- [Testing](docs/testing.md)
+- [Operations and Releases](docs/operations.md)
 
-## Хранение данных в браузере
+## Browser Storage
 
-`localStorage`:
+`localStorage` keys:
 
-- `nullclaw_ui_auth_v1` — URL endpoint, `access_token`, `shared_key`, `expires_at`.
-- `nullclaw_ui_theme` — текущая тема интерфейса.
-- `nullclaw_ui_effects` — флаг визуальных эффектов.
+- `nullclaw_ui_auth_v1` - endpoint URL, `access_token`, `shared_key`, `expires_at`.
+- `nullclaw_ui_theme` - current theme.
+- `nullclaw_ui_effects` - visual effects toggle.
 
-Токен и ключ автоматически очищаются при истечении TTL или ошибках невалидной сессии (`unauthorized`).
+Auth token and shared key are cleared automatically when TTL expires or when the session is rejected (`unauthorized`).
 
-## Сборка и деплой
+## Build and Deploy
 
 ```bash
 npm run build
 ```
 
-Статический результат: `build/`. Можно деплоить в любой static hosting/CDN с fallback на `index.html`.
+Static output: `build/`. Deploy to any static hosting/CDN with `index.html` fallback configured.
 
-## Ограничения и нюансы
+## Limitations
 
-- Для X25519 нужен современный WebCrypto runtime в браузере.
-- Endpoint вводится вручную в UI и не прокидывается через `.env`.
-- UI не содержит server-side части и предполагает доступный WebSocket backend.
-
+- X25519 requires modern WebCrypto support in the browser.
+- Endpoint is currently user-entered in UI (not env-configured).
+- This repository is UI-only and expects an available WebSocket backend.

@@ -1,10 +1,10 @@
-# Протокол и E2E
+# Protocol and E2E
 
-Документ описывает фактическое поведение UI-клиента на стороне фронтенда.
+This document reflects the actual frontend behavior.
 
 ## Envelope
 
-Все сообщения идут в формате:
+All protocol messages use this envelope:
 
 ```json
 {
@@ -17,15 +17,15 @@
 }
 ```
 
-Валидация выполняется в `src/lib/protocol/client.svelte.ts`:
+Validation in `src/lib/protocol/client.svelte.ts` requires:
 
-- `v` должен быть `1`
-- `type` должен входить в whitelist
-- `session_id` должен быть непустой строкой
+- `v === 1`
+- known event `type`
+- non-empty `session_id`
 
-Невалидные сообщения игнорируются.
+Invalid envelopes are ignored.
 
-## Поддерживаемые события
+## Supported Events
 
 ### UI -> Core
 
@@ -43,28 +43,29 @@
 - `approval_request`
 - `error`
 
-## Pairing flow
+## Pairing Flow
 
-1. UI открывает WebSocket endpoint.
-2. После перехода клиента в `pairing` отправляется `pairing_request`:
-   - `pairing_code` (6 цифр)
-   - `client_pub` (X25519 public key, base64url)
-3. Core отвечает `pairing_result`:
+1. UI opens WebSocket endpoint.
+2. Once client reaches `pairing`, UI sends `pairing_request` with:
+   - `pairing_code` (6 digits)
+   - `client_pub` (base64url X25519 public key)
+3. Core responds with `pairing_result` containing:
    - `access_token`
-   - опционально `expires_in`
-   - `e2e.agent_pub` (X25519 public key)
-4. UI вычисляет shared key и включает E2E-режим.
-5. Auth + shared key сохраняются в localStorage.
+   - optional `expires_in`
+   - optional `e2e.agent_pub`
+4. UI derives shared key and enables E2E mode.
+5. Auth + shared key are persisted in local storage.
 
-## E2E криптография
+## E2E Cryptography
 
-Реализация: `src/lib/protocol/e2e.ts`.
+Implementation: `src/lib/protocol/e2e.ts`.
 
-- Key exchange: `X25519` через WebCrypto.
-- KDF: `SHA-256("webchannel-e2e-v1" || shared_secret)`.
+- Key exchange: `X25519` via WebCrypto.
+- Key derivation: `SHA-256("webchannel-e2e-v1" || shared_secret)`.
 - Symmetric encryption: `ChaCha20-Poly1305`.
-- Nonce: 12 байт, генерируется случайно.
-- Формат поля `e2e`:
+- Nonce: random 12-byte value.
+
+E2E payload format:
 
 ```json
 {
@@ -73,24 +74,23 @@
 }
 ```
 
-### Шифрование исходящих сообщений
+### Outgoing message encryption
 
-`sendMessage(content)`:
+`sendMessage(content)` behavior:
 
-- при наличии `e2eState` plaintext оборачивается в JSON (`content`, `sender_id`)
-- затем шифруется и отправляется в `payload.e2e`
-- в plaintext mode (без e2e) отправляется `payload.content`
+- If E2E key exists: wrap plaintext object (`content`, `sender_id`) and encrypt to `payload.e2e`.
+- If E2E key is not available: send `payload.content` in plaintext mode.
 
-### Расшифровка входящих сообщений
+### Incoming message decryption
 
-`assistant_*` события с `payload.e2e` расшифровываются на клиенте.
-Если расшифровка неуспешна, событие не ломает клиент: UI продолжает работу с исходным payload.
+For `assistant_*` events, if `payload.e2e` is present, client attempts decryption.
+If decryption fails, the event is still processed safely without crashing the UI.
 
-## Ошибки и отказоустойчивость
+## Errors and Resilience
 
 ### Error payload
 
-Для `type = "error"` ожидается:
+For `type = "error"`, expected payload shape:
 
 ```json
 {
@@ -99,37 +99,36 @@
 }
 ```
 
-Если payload malformed, клиент эмитит локальную client-error ошибку.
+Malformed error payloads produce a local client-side error event.
 
-### Unauthorized
+### Unauthorized handling
 
-При `payload.code === "unauthorized"`:
+When `payload.code === "unauthorized"`:
 
-- client очищает локальный session auth (`accessToken`, e2e key)
-- controller очищает persisted auth
-- session store очищается
+- client clears in-memory auth (`accessToken`, E2E key)
+- controller clears persisted auth
+- session store is reset
 
 ### Reconnect policy
 
-Reconnect включается только если:
+Reconnect is attempted only when all conditions hold:
 
-- соединение закрыто неожиданно;
-- сессия уже была `paired/chatting`;
-- есть `accessToken`;
-- `shouldReconnect = true`.
+- socket closes unexpectedly
+- previous state was `paired` or `chatting`
+- access token exists
+- reconnect is enabled (`shouldReconnect = true`)
 
-Backoff:
+Backoff strategy:
 
-- базовая задержка: 1000ms
-- экспоненциальный рост до 30s
-- jitter 50-100% от текущего шага
+- base delay: 1000 ms
+- exponential growth up to 30 s
+- jitter: 50-100% of computed delay
 
-## Корреляция запросов
+## Request Correlation
 
-`request_id` используется для сопоставления:
+`request_id` is used to correlate:
 
 - `tool_call` <-> `tool_result`
 - `approval_request` <-> `approval_response`
 
-Store умеет fallback-сопоставление для `tool_result` без `request_id`: результат прикрепляется к последнему незавершённому tool-вызову.
-
+If a `tool_result` arrives without `request_id`, store falls back to the latest unresolved tool call.

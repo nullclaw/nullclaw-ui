@@ -1,36 +1,36 @@
-# Разработка
+# Development
 
-## Предпосылки
+## Prerequisites
 
 - `Node.js` 20+
 - `npm` 10+
 
-Проверка:
+Check versions:
 
 ```bash
 node -v
 npm -v
 ```
 
-## Локальный запуск
+## Local Run
 
 ```bash
 npm install
 npm run dev
 ```
 
-Dev server по умолчанию: `http://localhost:5173`.
+Default dev URL: `http://localhost:5173`.
 
-## Сборка
+## Build
 
 ```bash
 npm run build
 npm run preview
 ```
 
-Build output: `build/`.
+Build output directory: `build/`.
 
-## Структура проекта
+## Project Structure
 
 ```text
 src/
@@ -39,37 +39,36 @@ src/
     +layout.ts
     +page.svelte
   lib/
-    components/                  UI-компоненты
+    components/                  UI components
     protocol/                    WebChannel client + types + crypto
     session/                     orchestration + auth storage
     stores/                      session store
     ui/                          UI preferences
-    theme.ts                     темы/эффекты
+    theme.ts                     themes/effects
 ```
 
-## Основные соглашения по коду
+## Code Conventions
 
-- Svelte 5 runes (`$state`, `$derived`, `$effect`) — избегать смешивания с устаревшими паттернами.
-- Компоненты держать "тонкими": минимум бизнес-логики, максимум отображения.
-- Transport-логика только в `protocol/*` и `connection-controller`.
-- Любой `unknown` payload проверяется через type guards (`asObject`, `asString`, `asBoolean`).
-- Внешние side effects (localStorage, document classes, WebSocket) держать изолированно.
+- Use Svelte 5 runes (`$state`, `$derived`, `$effect`) consistently.
+- Keep components thin; place orchestration/side effects in dedicated modules.
+- Keep transport logic in `protocol/*` + `connection-controller`.
+- Guard all unknown payloads (`asObject`, `asString`, `asBoolean` style checks).
+- Isolate side effects (WebSocket, localStorage, document class mutations).
 
-## Добавление новой функциональности
+## Adding Features
 
-1. Определите источник изменения:
-   - новый protocol event
-   - изменение UI
-   - изменение session model
-2. Добавьте тип/валидацию в `protocol`.
-3. Добавьте обработчик в `session.store` или `connection-controller`.
-4. Добавьте/обновите компонент.
-5. Добавьте тесты в соответствующий слой.
-6. Прогоните `npm run test` и `npm run check`.
+1. Identify target layer:
+   - protocol event
+   - session model
+   - UI behavior
+2. Add or update protocol types/validation.
+3. Add handling in controller/store.
+4. Update UI component(s).
+5. Add/adjust tests.
+6. Run `npm run test` and `npm run check`.
 
-## Локальная отладка
+## Debugging Tips
 
-- Проверяйте `StatusBar` и диагностическое модальное окно для endpoint/state.
-- Для проверки reconnect используйте закрытие сокета на backend.
-- Для проверки persistence очистите/подмените localStorage через DevTools.
-
+- Use `StatusBar` + diagnostics modal to inspect endpoint/session state.
+- Force socket closures on backend to verify reconnect behavior.
+- Inspect and reset localStorage when debugging restore logic.
