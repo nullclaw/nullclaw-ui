@@ -1,6 +1,26 @@
+<script module lang="ts">
+  import { marked } from "marked";
+  import { markedHighlight } from "marked-highlight";
+  import hljs from "highlight.js";
+  import "highlight.js/styles/atom-one-dark.css";
+
+  let highlightConfigured = false;
+  if (!highlightConfigured) {
+    marked.use(
+      markedHighlight({
+        langPrefix: "hljs language-",
+        highlight(code, lang) {
+          const language = hljs.getLanguage(lang) ? lang : "plaintext";
+          return hljs.highlight(code, { language }).value;
+        },
+      }),
+    );
+    highlightConfigured = true;
+  }
+</script>
+
 <script lang="ts">
   import type { ChatMessage } from "$lib/stores/session.svelte";
-  import { marked } from "marked";
   import DOMPurify from "isomorphic-dompurify";
 
   interface Props {
@@ -22,6 +42,61 @@
     marked.parse(message.content, { breaks: true, gfm: true }) as string,
   );
   const safeHtml = $derived(DOMPurify.sanitize(rawHtml));
+
+  function setupCopy(node: HTMLElement) {
+    const handleClick = async (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      if (
+        target.tagName === "CODE" &&
+        target.parentElement?.tagName !== "PRE"
+      ) {
+        copyText(target, target.textContent || "");
+        return;
+      }
+
+      const pre = target.closest("pre");
+      if (pre) {
+        const codeEl = pre.querySelector("code");
+        if (codeEl) {
+          copyText(pre, codeEl.textContent || "");
+        }
+      }
+    };
+
+    const copyText = async (el: HTMLElement, text: string) => {
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+
+        const originalTx = el.style.transform;
+        const originalFilter = el.style.filter;
+        const originalTransition = el.style.transition;
+
+        el.style.transition = "all 0.1s ease";
+        el.style.transform = "scale(0.98)";
+        el.style.filter = "brightness(1.5)";
+
+        setTimeout(() => {
+          el.style.transform = originalTx;
+          el.style.filter = originalFilter;
+
+          setTimeout(() => {
+            el.style.transition = originalTransition;
+          }, 100);
+        }, 150);
+      } catch (err) {
+        console.error("Failed to copy", err);
+      }
+    };
+
+    node.addEventListener("click", handleClick);
+    return {
+      destroy() {
+        node.removeEventListener("click", handleClick);
+      },
+    };
+  }
 </script>
 
 <div class="bubble-container" class:user={isUser} class:assistant={!isUser}>
@@ -40,7 +115,7 @@
     <span class="timestamp">[{time}]</span>
   </div>
   <div class="content typewriter">
-    <div class="markdown-body">
+    <div class="markdown-body" use:setupCopy>
       {@html safeHtml}
     </div>
     {#if message.streaming}
