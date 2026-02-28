@@ -4,10 +4,9 @@
   interface Props {
     state: ClientState;
     sessionId: string;
-    e2eEnabled: boolean;
   }
 
-  let { state, sessionId, e2eEnabled }: Props = $props();
+  let { state, sessionId }: Props = $props();
 
   const statusColor = $derived(
     state === 'chatting' || state === 'paired' ? 'var(--accent)'
@@ -33,11 +32,7 @@
     <span class="session-id">{sessionId}</span>
   </div>
   <div class="right">
-    {#if e2eEnabled}
-      <span class="e2e-badge" title="End-to-end encrypted">🔒 e2e</span>
-    {:else}
-      <span class="e2e-off" title="No encryption">🔓</span>
-    {/if}
+    <span class="e2e-badge" title="End-to-end encrypted">🔒 e2e</span>
   </div>
 </header>
 
@@ -82,9 +77,5 @@
 
   .e2e-badge {
     color: var(--accent);
-  }
-
-  .e2e-off {
-    color: var(--fg-dim);
   }
 </style>

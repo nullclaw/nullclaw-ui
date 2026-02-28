@@ -13,17 +13,31 @@ function toBase64Url(buf: ArrayBuffer | Uint8Array): string {
 }
 
 function fromBase64Url(s: string): Uint8Array {
-  const padded = s.replace(/-/g, '+').replace(/_/g, '/');
+  const mod = s.length % 4;
+  const pad = mod === 0 ? '' : '='.repeat(4 - mod);
+  const padded = s.replace(/-/g, '+').replace(/_/g, '/') + pad;
   const binary = atob(padded);
-  const bytes = new Uint8Array(binary.length);
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
+}
+
+export function bytesToBase64Url(buf: Uint8Array): string {
+  return toBase64Url(buf);
+}
+
+export function base64UrlToBytes(s: string): Uint8Array {
+  return fromBase64Url(s);
 }
 
 // -- X25519 key exchange (Web Crypto) --
 
 export async function generateKeyPair(): Promise<CryptoKeyPair> {
-  return crypto.subtle.generateKey({ name: 'X25519' }, true, ['deriveBits']);
+  const generated = await crypto.subtle.generateKey({ name: 'X25519' }, true, ['deriveBits']);
+  if (!('privateKey' in generated) || !('publicKey' in generated)) {
+    throw new Error('WebCrypto did not return X25519 key pair');
+  }
+  return generated;
 }
 
 export async function exportPublicKey(key: CryptoKey): Promise<string> {
@@ -33,7 +47,11 @@ export async function exportPublicKey(key: CryptoKey): Promise<string> {
 
 async function importPublicKey(base64url: string): Promise<CryptoKey> {
   const raw = fromBase64Url(base64url);
-  return crypto.subtle.importKey('raw', raw, { name: 'X25519' }, true, []);
+  const rawBuffer: ArrayBuffer =
+    raw.byteOffset === 0 && raw.byteLength === raw.buffer.byteLength
+      ? (raw.buffer as ArrayBuffer)
+      : raw.slice().buffer;
+  return crypto.subtle.importKey('raw', rawBuffer, { name: 'X25519' }, true, []);
 }
 
 export async function deriveSharedKey(

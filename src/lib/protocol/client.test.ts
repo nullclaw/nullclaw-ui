@@ -131,6 +131,25 @@ describe('NullclawClient', () => {
     expect(events[0].payload.content).toBe('hi there');
   });
 
+  it('restores auth and skips pairing on reconnect', () => {
+    const client = new NullclawClient('ws://localhost:32123/ws', 'sess-1');
+    client.restoreSession('jwt-123', new Uint8Array(32).fill(7));
+    client.connect();
+
+    const ws = MockWebSocket.instances[0];
+    ws.simulateOpen();
+
+    expect(client.state).toBe('paired');
+    expect(ws.sent.length).toBe(0);
+
+    client.sendMessage('hello');
+    expect(ws.sent.length).toBe(1);
+    const msg = JSON.parse(ws.sent[0]);
+    expect(msg.type).toBe('user_message');
+    expect(msg.payload.access_token).toBe('jwt-123');
+    expect(msg.payload.e2e).toBeDefined();
+  });
+
   it('handles error events', () => {
     const client = new NullclawClient('ws://localhost:32123/ws', 'sess-1');
     const events: any[] = [];

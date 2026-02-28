@@ -24,6 +24,39 @@ export class NullclawClient {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private shouldReconnect = true;
 
+  private asObject(value: unknown): Record<string, unknown> | null {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
+    }
+    return null;
+  }
+
+  private parsePairingResultPayload(value: unknown): PairingResultPayload | null {
+    const obj = this.asObject(value);
+    if (!obj) return null;
+    if (typeof obj.access_token !== 'string' || obj.access_token.length === 0) return null;
+
+    const parsed: PairingResultPayload = {
+      access_token: obj.access_token,
+    };
+    if (typeof obj.set_cookie === 'string') parsed.set_cookie = obj.set_cookie;
+    const e2e = this.asObject(obj.e2e);
+    if (e2e && typeof e2e.agent_pub === 'string') {
+      parsed.e2e = { agent_pub: e2e.agent_pub };
+    }
+    return parsed;
+  }
+
+  private parseErrorPayload(value: unknown): ErrorPayload | null {
+    const obj = this.asObject(value);
+    if (!obj) return null;
+    if (typeof obj.message !== 'string' || obj.message.length === 0) return null;
+    return {
+      message: obj.message,
+      code: typeof obj.code === 'string' ? obj.code : undefined,
+    };
+  }
+
   constructor(url: string, sessionId: string) {
     this.url = url;
     this.sessionId = sessionId;
@@ -35,7 +68,7 @@ export class NullclawClient {
     this.ws = new WebSocket(this.url);
 
     this.ws.onopen = () => {
-      this.state = 'pairing';
+      this.state = this.accessToken ? 'paired' : 'pairing';
       this.reconnectAttempt = 0;
     };
 
@@ -68,6 +101,30 @@ export class NullclawClient {
     this.state = 'disconnected';
     this.accessToken = null;
     this.e2eState = null;
+  }
+
+  restoreSession(accessToken: string, sharedKey: Uint8Array) {
+    this.accessToken = accessToken;
+    this.e2eState = { sharedKey: new Uint8Array(sharedKey) };
+    this.state = 'paired';
+  }
+
+  clearSessionAuth() {
+    this.accessToken = null;
+    this.e2eState = null;
+    if (this.ws?.readyState === 1) {
+      this.state = 'pairing';
+    } else {
+      this.state = 'disconnected';
+    }
+  }
+
+  getSessionAuth(): { accessToken: string; sharedKey: Uint8Array } | null {
+    if (!this.accessToken || !this.e2eState) return null;
+    return {
+      accessToken: this.accessToken,
+      sharedKey: new Uint8Array(this.e2eState.sharedKey),
+    };
   }
 
   sendPairingRequest(code: string, clientPub?: string) {
@@ -114,26 +171,35 @@ export class NullclawClient {
     }
 
     if (msg.type === 'pairing_result') {
-      const payload = msg.payload as PairingResultPayload;
+      const payload = this.parsePairingResultPayload(msg.payload);
+      if (!payload) return;
       this.accessToken = payload.access_token;
       this.state = 'paired';
     }
 
     if (msg.type === 'error') {
-      const payload = msg.payload as ErrorPayload;
+      const payload = this.parseErrorPayload(msg.payload);
+      if (!payload) return;
       if (payload.code === 'unauthorized') {
-        this.accessToken = null;
-        this.state = 'pairing';
+        this.clearSessionAuth();
       }
     }
 
     // Decrypt E2E if present
-    if (msg.payload && 'e2e' in msg.payload && this.e2eState) {
-      const e2e = msg.payload.e2e as E2EPayload;
+    const payloadObj = this.asObject(msg.payload);
+    if (payloadObj && 'e2e' in payloadObj && this.e2eState) {
+      const e2eRaw = this.asObject(payloadObj.e2e);
+      if (!e2eRaw || typeof e2eRaw.nonce !== 'string' || typeof e2eRaw.ciphertext !== 'string') {
+        this.onEvent?.(msg);
+        return;
+      }
+      const e2e: E2EPayload = { nonce: e2eRaw.nonce, ciphertext: e2eRaw.ciphertext };
       try {
         const decrypted = decrypt(this.e2eState.sharedKey, e2e.nonce, e2e.ciphertext);
         const parsed = JSON.parse(decrypted);
-        (msg.payload as any).content = parsed.content;
+        if (typeof parsed?.content === 'string') {
+          payloadObj.content = parsed.content;
+        }
       } catch {
         // Decryption failed, pass event as-is
       }

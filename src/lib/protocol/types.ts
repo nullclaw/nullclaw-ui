@@ -24,7 +24,7 @@ export interface Envelope {
   session_id: string;
   agent_id?: string;
   request_id?: string;
-  payload?: Record<string, unknown>;
+  payload?: unknown;
   content?: string; // legacy compat
 }
 
@@ -95,8 +95,9 @@ export interface E2EPayload {
 export type PairingErrorCode =
   | 'pairing_already_used'
   | 'pairing_e2e_required'
-  | 'invalid_code'
-  | 'locked_out'
+  | 'pairing_invalid_code'
+  | 'pairing_locked_out'
+  | 'pairing_code_expired'
   | 'unauthorized'
   | 'e2e_required';
 

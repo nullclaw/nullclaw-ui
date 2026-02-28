@@ -2,20 +2,19 @@
   interface Props {
     connecting?: boolean;
     error?: string | null;
-    onConnect: (url: string, code: string, e2eEnabled: boolean) => void;
+    onConnect: (url: string, code: string) => void;
   }
 
   let { connecting = false, error = null, onConnect }: Props = $props();
 
   let url = $state('ws://127.0.0.1:32123/ws');
   let code = $state('');
-  let e2eEnabled = $state(false);
 
   function handleSubmit(e: Event) {
     e.preventDefault();
     const trimmed = code.replace(/\s/g, '');
     if (trimmed.length !== 6 || !/^\d{6}$/.test(trimmed)) return;
-    onConnect(url, trimmed, e2eEnabled);
+    onConnect(url, trimmed);
   }
 
   function handleCodeInput(e: Event) {
@@ -55,10 +54,7 @@
         />
       </label>
 
-      <label class="field toggle">
-        <input type="checkbox" bind:checked={e2eEnabled} disabled={connecting} />
-        <span class="label">end-to-end encryption (X25519 + ChaCha20)</span>
-      </label>
+      <div class="label">end-to-end encryption is always enabled (X25519 + ChaCha20)</div>
 
       {#if error}
         <div class="error">{error}</div>
@@ -112,19 +108,6 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-  }
-
-  .field.toggle {
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-  }
-
-  .field.toggle input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--accent);
   }
 
   .label {
