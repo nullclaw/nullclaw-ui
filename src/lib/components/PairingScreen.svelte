@@ -1,14 +1,13 @@
 <script lang="ts">
   interface Props {
-    defaultUrl?: string;
     connecting?: boolean;
     error?: string | null;
     onConnect: (url: string, code: string, e2eEnabled: boolean) => void;
   }
 
-  let { defaultUrl = 'ws://127.0.0.1:32123/ws', connecting = false, error = null, onConnect }: Props = $props();
+  let { connecting = false, error = null, onConnect }: Props = $props();
 
-  let url = $state(defaultUrl);
+  let url = $state('ws://127.0.0.1:32123/ws');
   let code = $state('');
   let e2eEnabled = $state(false);
 
