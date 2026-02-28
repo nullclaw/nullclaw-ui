@@ -221,6 +221,13 @@
     font-size: 0.9em;
     text-shadow: none;
     border: 1px solid rgba(255, 42, 42, 0.3);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  :global(.markdown-body code:not(pre code):hover) {
+    background: rgba(255, 42, 42, 0.25);
+    box-shadow: 0 0 8px rgba(255, 42, 42, 0.4);
   }
 
   :global(.markdown-body pre) {
@@ -231,6 +238,15 @@
     border-radius: 4px;
     margin: 8px 0;
     box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.05); /* very subtle accent glow inside */
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  :global(.markdown-body pre:hover) {
+    border-color: var(--accent-dim);
+    box-shadow:
+      inset 0 0 15px rgba(0, 255, 65, 0.1),
+      0 0 8px rgba(0, 255, 65, 0.2);
   }
 
   :global(.markdown-body pre code) {
