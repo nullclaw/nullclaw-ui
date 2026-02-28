@@ -101,4 +101,14 @@ describe('createSessionStore', () => {
     expect(session.toolCalls[0].name).toBe('unknown_tool');
     expect(session.error).toBe('Unknown error');
   });
+
+  it('sets local errors explicitly via setError', () => {
+    const session = createSessionStore();
+
+    session.setError('Local transport error');
+    expect(session.error).toBe('Local transport error');
+
+    session.setError(null);
+    expect(session.error).toBeNull();
+  });
 });

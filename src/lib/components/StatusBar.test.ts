@@ -25,8 +25,8 @@ describe('StatusBar', () => {
     expect(getByText('nullclaw@127.0.0.1:32123')).toBeTruthy();
     expect(getByText('[ SESSION: sess-1 ]')).toBeTruthy();
 
-    const themeSelect = getByRole('combobox') as HTMLSelectElement;
-    await fireEvent.change(themeSelect, { target: { value: 'amber' } });
+    await fireEvent.click(getByRole('button', { name: 'matrix ▼' }));
+    await fireEvent.click(getByRole('button', { name: 'Amber' }));
     expect(onThemeChange).toHaveBeenCalledWith('amber');
 
     await fireEvent.click(getByRole('button', { name: 'FX:ON' }));

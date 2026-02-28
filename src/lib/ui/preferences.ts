@@ -16,14 +16,11 @@ export interface UiPreferences {
 
 export function loadUiPreferences(
   fallbackTheme: ThemeName = 'matrix',
-  fallbackEffectsEnabled: boolean = false
+  fallbackEffectsEnabled = true,
 ): UiPreferences {
-  const theme = loadTheme(fallbackTheme);
-  const effectsEnabled = loadEffectsEnabled(fallbackEffectsEnabled);
-
   return {
-    theme,
-    effectsEnabled,
+    theme: loadTheme(fallbackTheme),
+    effectsEnabled: loadEffectsEnabled(fallbackEffectsEnabled),
   };
 }
 

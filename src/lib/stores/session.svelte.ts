@@ -220,6 +220,10 @@ export function createSessionStore() {
     if (a) a.resolved = true;
   }
 
+  function setError(message: string | null) {
+    error = message;
+  }
+
   return {
     get messages() {
       return messages;
@@ -240,5 +244,6 @@ export function createSessionStore() {
     handleEvent,
     clear,
     resolveApproval,
+    setError,
   };
 }
