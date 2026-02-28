@@ -6,26 +6,30 @@
   import { NullclawClient } from "$lib/protocol/client.svelte";
   import { createSessionStore } from "$lib/stores/session.svelte";
   import {
+    clearStoredAuth,
+    loadStoredAuth,
+    parseStoredSharedKey,
+    saveStoredAuth,
+  } from "$lib/session/auth-storage";
+  import {
+    applyTheme,
+    coerceTheme,
+    loadTheme,
+    saveTheme,
+    type ThemeName,
+  } from "$lib/theme";
+  import {
     generateKeyPair,
     exportPublicKey,
     deriveSharedKey,
-    bytesToBase64Url,
-    base64UrlToBytes,
   } from "$lib/protocol/e2e";
 
   const sessionId = "default";
-  const AUTH_STORAGE_KEY = "nullclaw_ui_auth_v1";
-  const DEFAULT_TOKEN_TTL_SECS = 86_400;
-
-  type StoredAuth = {
-    url: string;
-    access_token: string;
-    shared_key: string;
-    expires_at: number;
-  };
 
   let client = $state<NullclawClient | null>(null);
   let pairingError = $state<string | null>(null);
+  let currentTheme = $state<ThemeName>("matrix");
+  let lastEndpointUrl = $state<string | null>(null);
 
   const session = createSessionStore();
 
@@ -33,87 +37,58 @@
   const isPaired = $derived(
     clientState === "paired" || clientState === "chatting",
   );
+  const endpointUrl = $derived(client?.url ?? lastEndpointUrl ?? "ws://unknown");
 
-  function loadStoredAuth(): StoredAuth | null {
-    if (typeof localStorage === "undefined") return null;
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
-
-    try {
-      const parsed = JSON.parse(raw);
-      if (
-        !parsed ||
-        typeof parsed.url !== "string" ||
-        typeof parsed.access_token !== "string" ||
-        typeof parsed.shared_key !== "string" ||
-        typeof parsed.expires_at !== "number"
-      ) {
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-        return null;
-      }
-      if (parsed.expires_at <= Date.now()) {
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-        return null;
-      }
-      return parsed as StoredAuth;
-    } catch {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      return null;
+  function asObject(value: unknown): Record<string, unknown> | null {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
     }
+    return null;
   }
 
-  function clearStoredAuth() {
-    if (typeof localStorage === "undefined") return;
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-  }
-
-  function saveStoredAuth(
-    url: string,
-    accessToken: string,
-    sharedKey: Uint8Array,
-    expiresIn?: unknown,
-  ) {
-    if (typeof localStorage === "undefined") return;
-    const ttlSecs =
-      typeof expiresIn === "number" &&
-      Number.isFinite(expiresIn) &&
-      expiresIn > 0
-        ? Math.floor(expiresIn)
-        : DEFAULT_TOKEN_TTL_SECS;
-    const payload: StoredAuth = {
-      url,
-      access_token: accessToken,
-      shared_key: bytesToBase64Url(sharedKey),
-      expires_at: Date.now() + ttlSecs * 1000,
-    };
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
-  }
+  type ClientBindings = {
+    setPairingKeyPair: (pairingKeyPair: CryptoKeyPair | null) => void;
+  };
 
   function attachClientHandlers(
     newClient: NullclawClient,
     endpointUrl: string,
-    pairingKeyPair: CryptoKeyPair | null,
-  ) {
+  ): ClientBindings {
+    let pairingKeyPair: CryptoKeyPair | null = null;
+
     newClient.onEvent = async (event) => {
+      const payload = asObject(event.payload);
+
       if (event.type === "pairing_result") {
-        const payload = event.payload as any;
+        const e2ePayload = asObject(payload?.e2e);
+        const agentPub =
+          e2ePayload && typeof e2ePayload.agent_pub === "string"
+            ? e2ePayload.agent_pub
+            : null;
+        const accessToken =
+          payload && typeof payload.access_token === "string"
+            ? payload.access_token
+            : null;
+        const expiresIn = payload?.expires_in;
+
         if (
           pairingKeyPair &&
-          typeof payload?.e2e?.agent_pub === "string" &&
-          typeof payload?.access_token === "string"
+          agentPub &&
+          accessToken
         ) {
           try {
             const sharedKey = await deriveSharedKey(
               pairingKeyPair.privateKey,
-              payload.e2e.agent_pub,
+              agentPub,
             );
             newClient.setE2EKey(sharedKey);
             saveStoredAuth(
               endpointUrl,
-              payload.access_token,
+              accessToken,
               sharedKey,
-              payload.expires_in,
+              expiresIn,
             );
+            lastEndpointUrl = endpointUrl;
           } catch {
             pairingError = "Could not complete secure pairing";
             clearStoredAuth();
@@ -121,18 +96,64 @@
           }
         }
       } else if (event.type === "error") {
-        const payload = event.payload as any;
         if (payload?.code === "unauthorized") {
           clearStoredAuth();
           session.clear();
+          lastEndpointUrl = null;
         }
         if (newClient.state === "pairing" || newClient.state === "connecting") {
-          pairingError = payload?.message ?? "Pairing failed";
+          pairingError =
+            typeof payload?.message === "string"
+              ? payload.message
+              : "Pairing failed";
         }
       }
 
       session.handleEvent(event);
     };
+
+    return {
+      setPairingKeyPair(value: CryptoKeyPair | null) {
+        pairingKeyPair = value;
+      },
+    };
+  }
+
+  function waitForPairingState(
+    nextClient: NullclawClient,
+    timeoutMs = 10_000,
+  ): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      let settled = false;
+
+      const finish = (callback: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearInterval(check);
+        clearTimeout(timeout);
+        callback();
+      };
+
+      const check = setInterval(() => {
+        if (client !== nextClient) {
+          finish(() => reject(new Error("Connection replaced")));
+          return;
+        }
+
+        if (nextClient.state === "pairing") {
+          finish(resolve);
+          return;
+        }
+
+        if (nextClient.state === "disconnected") {
+          finish(() => reject(new Error("Connection failed")));
+        }
+      }, 50);
+
+      const timeout = setTimeout(() => {
+        finish(() => reject(new Error("Connection timeout")));
+      }, timeoutMs);
+    });
   }
 
   async function connectWithPairing(url: string, code: string) {
@@ -142,44 +163,33 @@
     session.clear();
 
     const newClient = new NullclawClient(url, sessionId);
-    let pairingKeyPair: CryptoKeyPair | null = null;
-    attachClientHandlers(newClient, url, pairingKeyPair);
+    const handlers = attachClientHandlers(newClient, url);
     client = newClient;
+    lastEndpointUrl = url;
     client.connect();
 
-    const waitForOpen = () =>
-      new Promise<void>((resolve, reject) => {
-        const check = setInterval(() => {
-          if (newClient.state === "pairing") {
-            clearInterval(check);
-            resolve();
-          } else if (newClient.state === "disconnected") {
-            clearInterval(check);
-            reject(new Error("Connection failed"));
-          }
-        }, 50);
-        setTimeout(() => {
-          clearInterval(check);
-          reject(new Error("Timeout"));
-        }, 10000);
-      });
-
     try {
-      await waitForOpen();
+      await waitForPairingState(newClient);
     } catch {
       pairingError = "Could not connect to server";
+      if (client === newClient) {
+        newClient.disconnect();
+        client = null;
+      }
       return;
     }
 
     try {
-      pairingKeyPair = await generateKeyPair();
+      const pairingKeyPair = await generateKeyPair();
       const clientPub = await exportPublicKey(pairingKeyPair.publicKey);
-      attachClientHandlers(newClient, url, pairingKeyPair);
+      handlers.setPairingKeyPair(pairingKeyPair);
       newClient.sendPairingRequest(code, clientPub);
     } catch {
       pairingError = "Failed to initialize end-to-end encryption";
-      newClient.disconnect();
-      client = null;
+      if (client === newClient) {
+        newClient.disconnect();
+        client = null;
+      }
     }
   }
 
@@ -187,21 +197,18 @@
     const stored = loadStoredAuth();
     if (!stored) return;
 
-    try {
-      const sharedKey = base64UrlToBytes(stored.shared_key);
-      if (sharedKey.length !== 32) {
-        clearStoredAuth();
-        return;
-      }
-
-      const restoredClient = new NullclawClient(stored.url, sessionId);
-      restoredClient.restoreSession(stored.access_token, sharedKey);
-      attachClientHandlers(restoredClient, stored.url, null);
-      client = restoredClient;
-      restoredClient.connect();
-    } catch {
+    const sharedKey = parseStoredSharedKey(stored.shared_key);
+    if (!sharedKey) {
       clearStoredAuth();
+      return;
     }
+
+    const restoredClient = new NullclawClient(stored.url, sessionId);
+    restoredClient.restoreSession(stored.access_token, sharedKey);
+    attachClientHandlers(restoredClient, stored.url);
+    client = restoredClient;
+    lastEndpointUrl = stored.url;
+    restoredClient.connect();
   }
 
   function handleSend(content: string) {
@@ -220,13 +227,45 @@
     client.sendApproval(approved, requestId);
   }
 
+  function handleThemeChange(theme: string) {
+    const nextTheme = coerceTheme(theme, currentTheme);
+    currentTheme = nextTheme;
+    saveTheme(nextTheme);
+    applyTheme(nextTheme);
+  }
+
+  function handleLogout() {
+    if (client) {
+      client.disconnect();
+    }
+    clearStoredAuth();
+    session.clear();
+    client = null;
+    lastEndpointUrl = null;
+    pairingError = null;
+  }
+
   onMount(() => {
+    currentTheme = loadTheme(currentTheme);
+    applyTheme(currentTheme);
     restoreSavedSession();
+
+    return () => {
+      client?.disconnect();
+      client = null;
+    };
   });
 </script>
 
 <div class="app">
-  <StatusBar state={clientState} {sessionId} />
+  <StatusBar
+    state={clientState}
+    {sessionId}
+    {endpointUrl}
+    {currentTheme}
+    onThemeChange={handleThemeChange}
+    onLogout={handleLogout}
+  />
 
   {#if isPaired}
     <ChatScreen
@@ -235,7 +274,7 @@
       approvals={session.approvals}
       error={session.error}
       isStreaming={session.isStreaming}
-      endpointUrl={client?.url || "ws://unknown"}
+      {endpointUrl}
       onSend={handleSend}
       onApproval={handleApproval}
     />

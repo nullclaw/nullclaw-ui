@@ -76,9 +76,13 @@
   });
 
   onMount(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       initComplete = true;
     }, 2000);
+
+    return () => {
+      clearTimeout(timer);
+    };
   });
 </script>
 

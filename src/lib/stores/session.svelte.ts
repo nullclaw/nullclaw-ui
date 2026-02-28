@@ -34,6 +34,21 @@ function nextId(): string {
   return `msg-${++messageIdCounter}-${Date.now()}`;
 }
 
+function asObject(value: unknown): Record<string, unknown> | null {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return null;
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function asBoolean(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null;
+}
+
 export function createSessionStore() {
   let messages = $state<ChatMessage[]>([]);
   let toolCalls = $state<ToolCall[]>([]);
@@ -50,88 +65,143 @@ export function createSessionStore() {
     });
   }
 
+  function appendAssistantChunk(chunk: string) {
+    if (streamingMessageId) {
+      const msg = messages.find((m) => m.id === streamingMessageId);
+      if (msg) {
+        msg.content += chunk;
+        return;
+      }
+      streamingMessageId = null;
+    }
+
+    const id = nextId();
+    messages.push({
+      id,
+      role: 'assistant',
+      content: chunk,
+      timestamp: Date.now(),
+      streaming: true,
+    });
+    streamingMessageId = id;
+  }
+
+  function finalizeAssistantMessage(finalContent: string | null) {
+    if (streamingMessageId) {
+      const msg = messages.find((m) => m.id === streamingMessageId);
+      if (msg) {
+        if (typeof finalContent === 'string' && finalContent.length > 0) {
+          msg.content = finalContent;
+        }
+        msg.streaming = false;
+      } else if (typeof finalContent === 'string' && finalContent.length > 0) {
+        messages.push({
+          id: nextId(),
+          role: 'assistant',
+          content: finalContent,
+          timestamp: Date.now(),
+        });
+      }
+
+      streamingMessageId = null;
+      return;
+    }
+
+    if (typeof finalContent !== 'string' || finalContent.length === 0) return;
+    messages.push({
+      id: nextId(),
+      role: 'assistant',
+      content: finalContent,
+      timestamp: Date.now(),
+    });
+  }
+
+  function applyToolResult(event: Envelope, payload: Record<string, unknown>) {
+    const result = {
+      ok: asBoolean(payload.ok) ?? false,
+      result: payload.result,
+      error: asString(payload.error) ?? undefined,
+    };
+
+    let toolCall: ToolCall | undefined;
+    if (event.request_id) {
+      toolCall = toolCalls.findLast((t) => t.requestId === event.request_id && !t.result);
+    }
+    if (!toolCall) {
+      toolCall = toolCalls.findLast((t) => !t.result);
+    }
+
+    if (toolCall) {
+      toolCall.result = result;
+      return;
+    }
+
+    toolCalls.push({
+      id: nextId(),
+      requestId: event.request_id,
+      name: 'unknown_tool',
+      arguments: {},
+      result,
+      timestamp: Date.now(),
+    });
+  }
+
   function handleEvent(event: Envelope) {
-    const payload = event.payload as any;
+    const payload = asObject(event.payload);
     error = null;
 
     switch (event.type) {
       case 'assistant_chunk': {
-        const content = payload?.content ?? '';
-        if (streamingMessageId) {
-          const msg = messages.find((m) => m.id === streamingMessageId);
-          if (msg) msg.content += content;
-        } else {
-          const id = nextId();
-          messages.push({
-            id,
-            role: 'assistant',
-            content,
-            timestamp: Date.now(),
-            streaming: true,
-          });
-          streamingMessageId = id;
-        }
+        const content = asString(payload?.content) ?? '';
+        if (!content) break;
+        appendAssistantChunk(content);
         break;
       }
 
       case 'assistant_final': {
-        const content = payload?.content ?? event.content ?? '';
-        if (streamingMessageId) {
-          const msg = messages.find((m) => m.id === streamingMessageId);
-          if (msg) {
-            msg.content = content;
-            msg.streaming = false;
-          }
-          streamingMessageId = null;
-        } else {
-          messages.push({
-            id: nextId(),
-            role: 'assistant',
-            content,
-            timestamp: Date.now(),
-          });
-        }
+        const content = asString(payload?.content) ?? asString(event.content);
+        finalizeAssistantMessage(content);
         break;
       }
 
       case 'tool_call': {
+        const argumentsPayload = asObject(payload?.arguments) ?? {};
         toolCalls.push({
           id: nextId(),
           requestId: event.request_id,
-          name: payload.name,
-          arguments: payload.arguments,
+          name: asString(payload?.name) ?? 'unknown_tool',
+          arguments: argumentsPayload,
           timestamp: Date.now(),
         });
         break;
       }
 
       case 'tool_result': {
-        const tc = toolCalls.findLast(
-          (t) => t.requestId === event.request_id && !t.result,
-        );
-        if (tc) {
-          tc.result = {
-            ok: payload.ok,
-            result: payload.result,
-            error: payload.error,
-          };
-        }
+        if (!payload) break;
+        applyToolResult(event, payload);
         break;
       }
 
       case 'approval_request': {
+        if (
+          event.request_id &&
+          approvals.some((approval) => approval.requestId === event.request_id && !approval.resolved)
+        ) {
+          break;
+        }
+
         approvals.push({
           id: nextId(),
           requestId: event.request_id,
-          action: payload.action,
-          reason: payload.reason,
+          action: asString(payload?.action) ?? 'unknown_action',
+          reason: asString(payload?.reason) ?? undefined,
           timestamp: Date.now(),
         });
         break;
       }
 
       case 'error': {
-        error = payload?.message ?? 'Unknown error';
+        error = asString(payload?.message) ?? 'Unknown error';
         break;
       }
     }

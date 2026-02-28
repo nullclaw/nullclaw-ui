@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
 
-:root {
+:root,
+body.theme-matrix {
   /* Default Theme: Matrix Green */
   --bg: #030a05;
   --bg-surface: rgba(0, 20, 5, 0.7);
@@ -13,77 +14,81 @@
   --warning: #ffaa00;
   --border: rgba(0, 255, 65, 0.3);
   --border-glow: rgba(0, 255, 65, 0.5);
-  --text-glow: 0 0 5px rgba(0, 255, 65, 0.5);
+  --text-glow: 0 0 5px rgba(0, 255, 65, 0.4);
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
 }
 
-[data-theme='matrix'] {
-  --bg: #030a05;
-  --bg-surface: rgba(0, 20, 5, 0.7);
-  --bg-hover: rgba(0, 40, 10, 0.8);
-  --fg: #00ff41;
-  --fg-dim: #00aa2a;
-  --accent: #00ff41;
-  --accent-dim: #008822;
-  --error: #ff2a2a;
-  --warning: #ffaa00;
-  --border: rgba(0, 255, 65, 0.3);
-  --border-glow: rgba(0, 255, 65, 0.5);
-  --text-glow: 0 0 5px rgba(0, 255, 65, 0.5);
+body.theme-dracula {
+  --bg: #282a36;
+  --bg-surface: rgba(40, 42, 54, 0.85);
+  --bg-hover: rgba(68, 71, 90, 0.8);
+  --fg: #f8f8f2;
+  --fg-dim: #bbbbbb;
+  --accent: #bd93f9;
+  --accent-dim: #ff79c6;
+  --error: #ff5555;
+  --warning: #f1fa8c;
+  --border: rgba(189, 147, 249, 0.4);
+  --border-glow: rgba(189, 147, 249, 0.6);
+  --text-glow: 0 0 5px rgba(189, 147, 249, 0.3);
 }
 
-[data-theme='dracula'] {
-  --bg: #1e1e2e;
-  --bg-surface: rgba(30, 30, 46, 0.8);
-  --bg-hover: rgba(49, 50, 68, 0.8);
-  --fg: #cdd6f4;
-  --fg-dim: #a6adc8;
-  --accent: #cba6f7;
-  --accent-dim: #b4befe;
-  --error: #f38ba8;
-  --warning: #f9e2af;
-  --border: rgba(203, 166, 247, 0.3);
-  --border-glow: rgba(203, 166, 247, 0.5);
-  --text-glow: 0 0 5px rgba(203, 166, 247, 0.3);
-}
-
-[data-theme='synthwave'] {
+body.theme-synthwave {
   --bg: #1a0b2e;
-  --bg-surface: rgba(43, 17, 72, 0.7);
-  --bg-hover: rgba(69, 26, 116, 0.8);
-  --fg: #ff00ff;
-  --fg-dim: #b500b5;
-  --accent: #00ffff;
-  --accent-dim: #00b5b5;
+  --bg-surface: rgba(26, 11, 46, 0.85);
+  --bg-hover: rgba(54, 23, 94, 0.8);
+  --fg: #00ffff;
+  --fg-dim: #36c5c5;
+  --accent: #ff00ff;
+  --accent-dim: #b500b5;
   --error: #ff3366;
   --warning: #f7e018;
-  --border: rgba(0, 255, 255, 0.3);
-  --border-glow: rgba(255, 0, 255, 0.5);
-  --text-glow: 0 0 6px rgba(255, 0, 255, 0.6);
+  --border: rgba(255, 0, 255, 0.4);
+  --border-glow: rgba(255, 0, 255, 0.6);
+  --text-glow: 0 0 6px rgba(255, 0, 255, 0.5);
 }
 
-[data-theme='amber'] {
-  --bg: #110500;
-  --bg-surface: rgba(33, 11, 0, 0.7);
-  --bg-hover: rgba(66, 22, 0, 0.8);
+body.theme-amber {
+  --bg: #1c0f00;
+  --bg-surface: rgba(28, 15, 0, 0.85);
+  --bg-hover: rgba(66, 32, 0, 0.8);
   --fg: #ffb000;
-  --fg-dim: #b37b00;
+  --fg-dim: #cc8d00;
   --accent: #ffb000;
-  --accent-dim: #cc8d00;
+  --accent-dim: #b37b00;
   --error: #ff4400;
   --warning: #ffea00;
-  --border: rgba(255, 176, 0, 0.3);
-  --border-glow: rgba(255, 176, 0, 0.5);
-  --text-glow: 0 0 5px rgba(255, 176, 0, 0.5);
+  --border: rgba(255, 176, 0, 0.35);
+  --border-glow: rgba(255, 176, 0, 0.55);
+  --text-glow: 0 0 5px rgba(255, 176, 0, 0.4);
 }
 
-*, *::before, *::after {
+body.theme-light {
+  --bg: #e4e2de;
+  /* Vintage paper terminal */
+  --bg-surface: rgba(255, 255, 255, 0.6);
+  --bg-hover: rgba(220, 218, 214, 0.8);
+  --fg: #2b2b2b;
+  --fg-dim: #5c5c5c;
+  --accent: #00702a;
+  --accent-dim: #004b1c;
+  --error: #cf222e;
+  --warning: #9a6700;
+  --border: rgba(0, 0, 0, 0.15);
+  --border-glow: rgba(0, 112, 42, 0.2);
+  --text-glow: none;
+}
+
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   background: var(--bg);
   color: var(--fg);
@@ -105,16 +110,26 @@ body::before {
   bottom: 0;
   right: 0;
   background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-  background-size: 100% 4px; /* Scanline thickness */
+  background-size: 100% 4px;
+  /* Scanline thickness */
   z-index: 9999;
-  pointer-events: none; /* Let clicks pass through */
+  pointer-events: none;
+  /* Let clicks pass through */
 }
 
 /* CRT Flicker/Pulse */
 @keyframes crt-pulse {
-  0% { opacity: 0.95; }
-  50% { opacity: 1.0; }
-  100% { opacity: 0.95; }
+  0% {
+    opacity: 0.95;
+  }
+
+  50% {
+    opacity: 1.0;
+  }
+
+  100% {
+    opacity: 0.95;
+  }
 }
 
 body::after {
@@ -125,14 +140,16 @@ body::after {
   left: 0;
   bottom: 0;
   right: 0;
-  background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.4) 110%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, rgba(0, 0, 0, 0.4) 110%);
   z-index: 9998;
   pointer-events: none;
   animation: crt-pulse 4s infinite linear;
 }
 
 /* Base Inputs */
-input, button, textarea {
+input,
+button,
+textarea {
   font-family: inherit;
   font-size: inherit;
   color: inherit;
@@ -146,7 +163,8 @@ input, button, textarea {
   text-shadow: var(--text-glow);
 }
 
-input:focus, textarea:focus {
+input:focus,
+textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 8px var(--border-glow);
 }
@@ -200,20 +218,51 @@ button:disabled {
 
 /* Shared utility animations */
 @keyframes typeWriter {
-  from { width: 0; opacity: 0; }
-  to { width: 100%; opacity: 1; }
+  from {
+    width: 0;
+    opacity: 0;
+  }
+
+  to {
+    width: 100%;
+    opacity: 1;
+  }
 }
 
 @keyframes blinkCursor {
-  from, to { border-color: transparent; }
-  50% { border-color: var(--accent); }
+
+  from,
+  to {
+    border-color: transparent;
+  }
+
+  50% {
+    border-color: var(--accent);
+  }
 }
 
 @keyframes glitch {
-  0% { transform: translate(0) }
-  20% { transform: translate(-2px, 2px) }
-  40% { transform: translate(-2px, -2px) }
-  60% { transform: translate(2px, 2px) }
-  80% { transform: translate(2px, -2px) }
-  100% { transform: translate(0) }
+  0% {
+    transform: translate(0)
+  }
+
+  20% {
+    transform: translate(-2px, 2px)
+  }
+
+  40% {
+    transform: translate(-2px, -2px)
+  }
+
+  60% {
+    transform: translate(2px, 2px)
+  }
+
+  80% {
+    transform: translate(2px, -2px)
+  }
+
+  100% {
+    transform: translate(0)
+  }
 }

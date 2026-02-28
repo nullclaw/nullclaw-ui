@@ -52,6 +52,7 @@ export interface ApprovalResponsePayload {
 export interface PairingResultPayload {
   access_token: string;
   set_cookie?: string;
+  expires_in?: number;
   e2e?: {
     agent_pub: string;   // base64url X25519 public key
   };
