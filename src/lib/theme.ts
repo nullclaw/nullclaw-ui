@@ -1,4 +1,6 @@
 export const THEME_STORAGE_KEY = 'nullclaw_ui_theme';
+export const EFFECTS_STORAGE_KEY = 'nullclaw_ui_effects';
+
 export const SUPPORTED_THEMES = ['matrix', 'dracula', 'synthwave', 'amber', 'light'] as const;
 export type ThemeName = (typeof SUPPORTED_THEMES)[number];
 
@@ -52,4 +54,31 @@ export function applyTheme(theme: ThemeName) {
   }
 
   document.body.classList.add(`${THEME_CLASS_PREFIX}${theme}`);
+}
+
+export function loadEffectsEnabled(fallback: boolean = true): boolean {
+  const storage = getStorage();
+  if (!storage) return fallback;
+
+  const stored = storage.getItem(EFFECTS_STORAGE_KEY);
+  if (stored === null) return fallback;
+  if (stored !== 'true' && stored !== 'false') return fallback;
+
+  return stored === 'true';
+}
+
+export function saveEffectsEnabled(enabled: boolean) {
+  const storage = getStorage();
+  if (!storage) return;
+  storage.setItem(EFFECTS_STORAGE_KEY, String(enabled));
+}
+
+export function applyEffectsEnabled(enabled: boolean) {
+  if (typeof document === 'undefined') return;
+
+  if (enabled) {
+    document.body.classList.remove('effects-disabled');
+  } else {
+    document.body.classList.add('effects-disabled');
+  }
 }

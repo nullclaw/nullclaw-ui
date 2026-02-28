@@ -12,12 +12,15 @@
     saveStoredAuth,
   } from "$lib/session/auth-storage";
   import {
-    applyTheme,
-    coerceTheme,
-    loadTheme,
-    saveTheme,
     type ThemeName,
   } from "$lib/theme";
+  import {
+    applyUiPreferences,
+    loadUiPreferences,
+    persistEffectsPreference,
+    persistThemePreference,
+    resolveThemePreference,
+  } from "$lib/ui/preferences";
   import {
     generateKeyPair,
     exportPublicKey,
@@ -29,6 +32,7 @@
   let client = $state<NullclawClient | null>(null);
   let pairingError = $state<string | null>(null);
   let currentTheme = $state<ThemeName>("matrix");
+  let effectsEnabled = $state<boolean>(true);
   let lastEndpointUrl = $state<string | null>(null);
 
   const session = createSessionStore();
@@ -37,7 +41,9 @@
   const isPaired = $derived(
     clientState === "paired" || clientState === "chatting",
   );
-  const endpointUrl = $derived(client?.url ?? lastEndpointUrl ?? "ws://unknown");
+  const endpointUrl = $derived(
+    client?.url ?? lastEndpointUrl ?? "ws://unknown",
+  );
 
   function asObject(value: unknown): Record<string, unknown> | null {
     if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -71,23 +77,14 @@
             : null;
         const expiresIn = payload?.expires_in;
 
-        if (
-          pairingKeyPair &&
-          agentPub &&
-          accessToken
-        ) {
+        if (pairingKeyPair && agentPub && accessToken) {
           try {
             const sharedKey = await deriveSharedKey(
               pairingKeyPair.privateKey,
               agentPub,
             );
             newClient.setE2EKey(sharedKey);
-            saveStoredAuth(
-              endpointUrl,
-              accessToken,
-              sharedKey,
-              expiresIn,
-            );
+            saveStoredAuth(endpointUrl, accessToken, sharedKey, expiresIn);
             lastEndpointUrl = endpointUrl;
           } catch {
             pairingError = "Could not complete secure pairing";
@@ -183,7 +180,14 @@
       const pairingKeyPair = await generateKeyPair();
       const clientPub = await exportPublicKey(pairingKeyPair.publicKey);
       handlers.setPairingKeyPair(pairingKeyPair);
-      newClient.sendPairingRequest(code, clientPub);
+      const sent = newClient.sendPairingRequest(code, clientPub);
+      if (!sent) {
+        pairingError = "Pairing request could not be sent";
+        newClient.disconnect();
+        if (client === newClient) {
+          client = null;
+        }
+      }
     } catch {
       pairingError = "Failed to initialize end-to-end encryption";
       if (client === newClient) {
@@ -213,8 +217,16 @@
 
   function handleSend(content: string) {
     if (!client) return;
+    if (!client.sendMessage(content)) {
+      session.handleEvent({
+        v: 1,
+        type: "error",
+        session_id: sessionId,
+        payload: { message: "Could not send message. Connection is not ready." },
+      });
+      return;
+    }
     session.addUserMessage(content);
-    client.sendMessage(content);
   }
 
   function handleApproval(
@@ -223,15 +235,28 @@
     approved: boolean,
   ) {
     if (!client) return;
+    const sent = client.sendApproval(approved, requestId);
+    if (!sent) {
+      session.handleEvent({
+        v: 1,
+        type: "error",
+        session_id: sessionId,
+        payload: { message: "Could not send approval response. Connection is not ready." },
+      });
+      return;
+    }
     session.resolveApproval(id);
-    client.sendApproval(approved, requestId);
   }
 
   function handleThemeChange(theme: string) {
-    const nextTheme = coerceTheme(theme, currentTheme);
+    const nextTheme = resolveThemePreference(theme, currentTheme);
     currentTheme = nextTheme;
-    saveTheme(nextTheme);
-    applyTheme(nextTheme);
+    persistThemePreference(nextTheme);
+  }
+
+  function handleEffectsChange(enabled: boolean) {
+    effectsEnabled = enabled;
+    persistEffectsPreference(enabled);
   }
 
   function handleLogout() {
@@ -246,8 +271,11 @@
   }
 
   onMount(() => {
-    currentTheme = loadTheme(currentTheme);
-    applyTheme(currentTheme);
+    const preferences = loadUiPreferences(currentTheme, true);
+    currentTheme = preferences.theme;
+    effectsEnabled = preferences.effectsEnabled;
+    applyUiPreferences(preferences);
+
     restoreSavedSession();
 
     return () => {
@@ -263,7 +291,9 @@
     {sessionId}
     {endpointUrl}
     {currentTheme}
+    {effectsEnabled}
     onThemeChange={handleThemeChange}
+    onEffectsChange={handleEffectsChange}
     onLogout={handleLogout}
   />
 

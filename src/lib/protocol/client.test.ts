@@ -65,12 +65,24 @@ describe('NullclawClient', () => {
     expect(ws.url).toBe('ws://localhost:32123/ws');
 
     ws.simulateOpen();
-    client.sendPairingRequest('123456');
+    const sent = client.sendPairingRequest('123456');
+    expect(sent).toBe(true);
 
     expect(ws.sent.length).toBe(1);
     const msg = JSON.parse(ws.sent[0]);
     expect(msg.type).toBe('pairing_request');
     expect(msg.payload.pairing_code).toBe('123456');
+  });
+
+  it('returns false for pairing request when socket is not open', () => {
+    const client = new NullclawClient('ws://localhost:32123/ws', 'sess-1');
+    client.connect();
+
+    const ws = MockWebSocket.instances[0];
+    ws.readyState = 3;
+
+    const sent = client.sendPairingRequest('123456');
+    expect(sent).toBe(false);
   });
 
   it('does not open duplicate sockets on repeated connect calls', () => {
@@ -116,7 +128,8 @@ describe('NullclawClient', () => {
       payload: { access_token: 'jwt-123' },
     }));
 
-    client.sendMessage('hello');
+    const sent = client.sendMessage('hello');
+    expect(sent).toBe(true);
     const msg = JSON.parse(ws.sent[0]);
     expect(msg.type).toBe('user_message');
     expect(msg.payload.content).toBe('hello');
@@ -154,8 +167,9 @@ describe('NullclawClient', () => {
     }));
 
     ws.readyState = 3; // CLOSED
-    client.sendMessage('hello');
+    const sent = client.sendMessage('hello');
 
+    expect(sent).toBe(false);
     expect(client.state).toBe('paired');
     expect(ws.sent.length).toBe(0);
   });
@@ -212,7 +226,8 @@ describe('NullclawClient', () => {
     expect(client.state).toBe('paired');
     expect(ws.sent.length).toBe(0);
 
-    client.sendMessage('hello');
+    const sent = client.sendMessage('hello');
+    expect(sent).toBe(true);
     expect(ws.sent.length).toBe(1);
     const msg = JSON.parse(ws.sent[0]);
     expect(msg.type).toBe('user_message');
@@ -235,6 +250,23 @@ describe('NullclawClient', () => {
 
     expect(events[0].type).toBe('error');
     expect(events[0].payload.code).toBe('unauthorized');
+  });
+
+  it('returns false for approval send when socket is closed', () => {
+    const client = new NullclawClient('ws://localhost:32123/ws', 'sess-1');
+    client.connect();
+
+    const ws = MockWebSocket.instances[0];
+    ws.simulateOpen();
+    ws.simulateMessage(JSON.stringify({
+      v: 1, type: 'pairing_result', session_id: 'sess-1',
+      payload: { access_token: 'jwt-123' },
+    }));
+
+    ws.readyState = 3;
+    const sent = client.sendApproval(true, 'req-1');
+    expect(sent).toBe(false);
+    expect(ws.sent).toHaveLength(0);
   });
 
   it('ignores malformed envelopes', () => {

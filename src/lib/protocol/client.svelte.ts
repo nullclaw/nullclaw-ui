@@ -143,13 +143,13 @@ export class NullclawClient {
     };
   }
 
-  sendPairingRequest(code: string, clientPub?: string) {
+  sendPairingRequest(code: string, clientPub?: string): boolean {
     const msg = makePairingRequest(this.sessionId, code, clientPub);
-    this.send(msg);
+    return this.send(msg);
   }
 
-  sendMessage(content: string) {
-    if (!this.accessToken) return;
+  sendMessage(content: string): boolean {
+    if (!this.accessToken) return false;
 
     let e2e: E2EPayload | undefined;
     if (this.e2eState) {
@@ -158,20 +158,21 @@ export class NullclawClient {
         e2e = encrypt(this.e2eState.sharedKey, plainObj);
       } catch {
         this.emitClientError('Could not encrypt outgoing message', 'e2e_encrypt_failed');
-        return;
+        return false;
       }
     }
 
     const msg = makeUserMessage(this.sessionId, this.accessToken, content, e2e);
-    if (this.send(msg)) {
-      this.state = 'chatting';
-    }
+    const sent = this.send(msg);
+    if (!sent) return false;
+    this.state = 'chatting';
+    return true;
   }
 
-  sendApproval(approved: boolean, requestId?: string, reason?: string) {
-    if (!this.accessToken) return;
+  sendApproval(approved: boolean, requestId?: string, reason?: string): boolean {
+    if (!this.accessToken) return false;
     const msg = makeApprovalResponse(this.sessionId, this.accessToken, approved, requestId, reason);
-    this.send(msg);
+    return this.send(msg);
   }
 
   setE2EKey(sharedKey: Uint8Array) {

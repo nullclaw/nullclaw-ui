@@ -101,7 +101,7 @@ body {
 }
 
 /* CRT Scanline Effect */
-body::before {
+body:not(.effects-disabled)::before {
   content: " ";
   display: block;
   position: absolute;
@@ -132,7 +132,7 @@ body::before {
   }
 }
 
-body::after {
+body:not(.effects-disabled)::after {
   content: " ";
   display: block;
   position: absolute;
@@ -189,6 +189,16 @@ button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+body.effects-disabled * {
+  text-shadow: none !important;
+}
+
+body.effects-disabled input:focus,
+body.effects-disabled textarea:focus,
+body.effects-disabled button:hover:not(:disabled) {
+  box-shadow: none !important;
 }
 
 ::selection {

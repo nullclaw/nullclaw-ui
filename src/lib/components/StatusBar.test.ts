@@ -6,6 +6,7 @@ import StatusBar from './StatusBar.svelte';
 describe('StatusBar', () => {
   it('renders connected endpoint and dispatches theme/logout actions', async () => {
     const onThemeChange = vi.fn();
+    const onEffectsChange = vi.fn();
     const onLogout = vi.fn();
 
     const { getByRole, getByText } = render(StatusBar, {
@@ -16,9 +17,9 @@ describe('StatusBar', () => {
         currentTheme: 'matrix',
         effectsEnabled: true,
         onThemeChange,
-        onEffectsChange: vi.fn(),
+        onEffectsChange,
         onLogout,
-      } as any,
+      },
     });
 
     expect(getByText('nullclaw@127.0.0.1:32123')).toBeTruthy();
@@ -27,6 +28,9 @@ describe('StatusBar', () => {
     const themeSelect = getByRole('combobox') as HTMLSelectElement;
     await fireEvent.change(themeSelect, { target: { value: 'amber' } });
     expect(onThemeChange).toHaveBeenCalledWith('amber');
+
+    await fireEvent.click(getByRole('button', { name: 'FX:ON' }));
+    expect(onEffectsChange).toHaveBeenCalledWith(false);
 
     await fireEvent.click(getByRole('button', { name: 'LOGOUT' }));
     expect(onLogout).toHaveBeenCalledTimes(1);
@@ -42,7 +46,7 @@ describe('StatusBar', () => {
         onThemeChange: vi.fn(),
         onEffectsChange: vi.fn(),
         onLogout: vi.fn(),
-      } as any,
+      },
     });
 
     expect(getByText('sys@nullclaw')).toBeTruthy();

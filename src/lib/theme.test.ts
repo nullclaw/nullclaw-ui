@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  EFFECTS_STORAGE_KEY,
+  applyEffectsEnabled,
   THEME_STORAGE_KEY,
   applyTheme,
   coerceTheme,
   isThemeName,
+  loadEffectsEnabled,
   loadTheme,
+  saveEffectsEnabled,
   saveTheme,
 } from './theme';
 
@@ -81,5 +85,24 @@ describe('theme utilities', () => {
     applyTheme('light');
     expect(document.body.classList.contains('theme-amber')).toBe(false);
     expect(document.body.classList.contains('theme-light')).toBe(true);
+  });
+
+  it('persists, loads and applies visual effects preference', () => {
+    expect(loadEffectsEnabled(true)).toBe(true);
+
+    saveEffectsEnabled(false);
+    expect(localStorage.getItem(EFFECTS_STORAGE_KEY)).toBe('false');
+    expect(loadEffectsEnabled(true)).toBe(false);
+
+    applyEffectsEnabled(false);
+    expect(document.body.classList.contains('effects-disabled')).toBe(true);
+
+    saveEffectsEnabled(true);
+    expect(loadEffectsEnabled(false)).toBe(true);
+    applyEffectsEnabled(true);
+    expect(document.body.classList.contains('effects-disabled')).toBe(false);
+
+    localStorage.setItem(EFFECTS_STORAGE_KEY, 'invalid');
+    expect(loadEffectsEnabled(false)).toBe(false);
   });
 });

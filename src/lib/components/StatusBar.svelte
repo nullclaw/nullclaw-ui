@@ -1,16 +1,15 @@
 <script lang="ts">
   import type { ClientState } from "$lib/protocol/client.svelte";
-  import {
-    THEME_OPTIONS,
-    type ThemeName,
-  } from "$lib/theme";
+  import { THEME_OPTIONS, type ThemeName } from "$lib/theme";
 
   interface Props {
     state: ClientState;
     sessionId: string;
     endpointUrl?: string;
     currentTheme: ThemeName;
+    effectsEnabled: boolean;
     onThemeChange: (theme: string) => void;
+    onEffectsChange: (enabled: boolean) => void;
     onLogout: () => void;
   }
 
@@ -19,7 +18,9 @@
     sessionId,
     endpointUrl,
     currentTheme,
+    effectsEnabled,
     onThemeChange,
+    onEffectsChange,
     onLogout,
   }: Props = $props();
 
@@ -73,6 +74,15 @@
   </div>
   <div class="right">
     <div class="segment theme-switcher">
+      <button
+        class="fx-toggle"
+        onclick={() => onEffectsChange(!effectsEnabled)}
+        title={effectsEnabled
+          ? "Disable visual effects"
+          : "Enable visual effects"}
+      >
+        FX:{effectsEnabled ? "ON" : "OFF"}
+      </button>
       <select
         value={currentTheme}
         onchange={(e) => onThemeChange((e.target as HTMLSelectElement).value)}
@@ -194,6 +204,26 @@
 
   .theme-select option {
     background: var(--bg-surface);
+    color: var(--fg);
+  }
+
+  .fx-toggle {
+    background: transparent;
+    color: var(--fg-dim);
+    border: none;
+    padding: 6px 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: bold;
+    outline: none;
+    cursor: pointer;
+    text-shadow: none;
+    transition:
+      color 0.2s ease,
+      text-shadow 0.2s ease;
+  }
+
+  .fx-toggle:hover {
     color: var(--fg);
   }
 
