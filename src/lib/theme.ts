@@ -56,7 +56,7 @@ export function applyTheme(theme: ThemeName) {
   document.body.classList.add(`${THEME_CLASS_PREFIX}${theme}`);
 }
 
-export function loadEffectsEnabled(fallback: boolean = true): boolean {
+export function loadEffectsEnabled(fallback: boolean = false): boolean {
   const storage = getStorage();
   if (!storage) return fallback;
 
