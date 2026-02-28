@@ -152,7 +152,7 @@ export function createSessionStore() {
 
     switch (event.type) {
       case 'assistant_chunk': {
-        const content = asString(payload?.content) ?? '';
+        const content = asString(payload?.content) ?? asString(event.content) ?? '';
         if (!content) break;
         appendAssistantChunk(content);
         break;
@@ -201,6 +201,9 @@ export function createSessionStore() {
       }
 
       case 'error': {
+        // If streaming was in progress, terminate the in-flight assistant message
+        // so the UI does not stay blocked waiting for an absent final chunk.
+        finalizeAssistantMessage(null);
         error = asString(payload?.message) ?? 'Unknown error';
         break;
       }

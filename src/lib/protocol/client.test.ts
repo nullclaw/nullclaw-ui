@@ -154,6 +154,32 @@ describe('NullclawClient', () => {
     expect(events[0].payload.content).toBe('hi there');
   });
 
+  it('decrypts e2e assistant_chunk payload before dispatch', async () => {
+    const client = new NullclawClient('ws://localhost:32123/ws', 'sess-1');
+    const events: any[] = [];
+    const sharedKey = new Uint8Array(32).fill(7);
+    client.restoreSession('jwt-123', sharedKey);
+    client.onEvent = (e: any) => events.push(e);
+    client.connect();
+
+    const ws = MockWebSocket.instances[0];
+    ws.simulateOpen();
+
+    const { encrypt } = await import('./e2e');
+    const encrypted = encrypt(sharedKey, JSON.stringify({ content: 'chunk-1' }));
+
+    ws.simulateMessage(JSON.stringify({
+      v: 1,
+      type: 'assistant_chunk',
+      session_id: 'sess-1',
+      payload: { e2e: encrypted },
+    }));
+
+    expect(events).toHaveLength(1);
+    expect(events[0].type).toBe('assistant_chunk');
+    expect(events[0].payload.content).toBe('chunk-1');
+  });
+
   it('does not switch to chatting when socket is not open', () => {
     const client = new NullclawClient('ws://localhost:32123/ws', 'sess-1');
     client.connect();

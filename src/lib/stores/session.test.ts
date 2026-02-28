@@ -31,6 +31,41 @@ describe('createSessionStore', () => {
     expect(session.isStreaming).toBe(false);
   });
 
+  it('accepts assistant_chunk legacy content fallback', () => {
+    const session = createSessionStore();
+
+    session.handleEvent(
+      makeEvent({ type: 'assistant_chunk', content: 'legacy chunk' }),
+    );
+    session.handleEvent(
+      makeEvent({ type: 'assistant_final', payload: {} }),
+    );
+
+    expect(session.messages).toHaveLength(1);
+    expect(session.messages[0].content).toBe('legacy chunk');
+    expect(session.messages[0].streaming).toBe(false);
+    expect(session.isStreaming).toBe(false);
+  });
+
+  it('clears streaming state when error arrives mid-stream', () => {
+    const session = createSessionStore();
+
+    session.handleEvent(
+      makeEvent({ type: 'assistant_chunk', payload: { content: 'partial' } }),
+    );
+    expect(session.isStreaming).toBe(true);
+
+    session.handleEvent(
+      makeEvent({ type: 'error', payload: { message: 'stream failed' } }),
+    );
+
+    expect(session.isStreaming).toBe(false);
+    expect(session.messages).toHaveLength(1);
+    expect(session.messages[0].content).toBe('partial');
+    expect(session.messages[0].streaming).toBe(false);
+    expect(session.error).toBe('stream failed');
+  });
+
   it('applies tool_result without request_id to the latest unresolved call', () => {
     const session = createSessionStore();
 
