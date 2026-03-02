@@ -3,13 +3,26 @@
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
+	"bin": {
+		"nullclaw-ui": "./bin/nullclaw-ui.js"
+	},
+	"files": [
+		"bin",
+		"build",
+		"README.md"
+	],
+	"engines": {
+		"node": ">=20"
+	},
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
+		"cli": "node ./bin/nullclaw-ui.js",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"prepare": "svelte-kit sync || echo ''",
+		"prepack": "npm run build",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
 	},

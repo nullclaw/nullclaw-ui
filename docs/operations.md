@@ -48,7 +48,24 @@ Security expectations:
 2. Run `npm run test` and `npm run check`.
 3. Manual verification of pairing, chat, approvals, logout.
 4. Build production bundle.
-5. Confirm diagnostics panel reflects actual E2E/runtime details.
+5. Verify CLI startup: `npm run cli -- run --host 127.0.0.1 --port 4173`.
+6. Tag a release: `git tag vYYYY.M.D && git push origin vYYYY.M.D`.
+7. Confirm GitHub Actions `Release` workflow attached `.tar.gz` and `.zip` assets.
+8. Confirm diagnostics panel reflects actual E2E/runtime details.
+
+## GitHub Release Artifacts
+
+When a tag matching `v*` is pushed, `.github/workflows/release.yml` runs and publishes:
+
+- `nullclaw-ui-<tag>.tar.gz`
+- `nullclaw-ui-<tag>.zip`
+
+Each archive contains:
+
+- `nullclaw-ui` (Unix launcher)
+- `nullclaw-ui.cmd` (Windows launcher)
+- `bin/nullclaw-ui.js`
+- `build/` (static app bundle)
 
 ## Troubleshooting
 
