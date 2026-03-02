@@ -54,10 +54,21 @@ function parseRunOptions(args) {
 	for (let i = 0; i < args.length; i += 1) {
 		const arg = args[i];
 		if (arg === "--host") {
-			options.host = args[i + 1];
+			const value = args[i + 1];
+			if (!value || value.startsWith("-")) {
+				throw new Error("Missing value for --host");
+			}
+			options.host = value;
 			i += 1;
 		} else if (arg === "--port") {
-			const parsed = Number.parseInt(args[i + 1], 10);
+			const value = args[i + 1];
+			if (!value || value.startsWith("-")) {
+				throw new Error("Missing value for --port");
+			}
+			if (!/^\d+$/.test(value)) {
+				throw new Error("Port must contain only digits");
+			}
+			const parsed = Number.parseInt(value, 10);
 			options.port = parsed;
 			i += 1;
 		} else if (arg === "-h" || arg === "--help") {
