@@ -4,6 +4,7 @@
     ToolCall,
     ApprovalRequest,
   } from "$lib/stores/session.svelte";
+  import { redactWebSocketAuthToken } from "$lib/protocol/ws-url";
   import MessageBubble from "./MessageBubble.svelte";
   import ToolCallBlock from "./ToolCallBlock.svelte";
   import ApprovalPrompt from "./ApprovalPrompt.svelte";
@@ -53,6 +54,10 @@
     items.sort((a, b) => a.data.timestamp - b.data.timestamp);
     return items;
   });
+
+  const safeEndpointUrl = $derived(
+    redactWebSocketAuthToken(endpointUrl) ?? endpointUrl,
+  );
 
   function handleSubmit(e: Event) {
     e.preventDefault();
@@ -105,7 +110,7 @@
             >> ESTABLISHING SECURE E2E CHANNEL... [OK]
           </p>
           <p class="typewriter-line-5">
-            >> CONNECTED TO ENDPOINT: {endpointUrl}
+            >> CONNECTED TO ENDPOINT: {safeEndpointUrl}
           </p>
           {#if initComplete}
             <p class="ready-text text-glow">

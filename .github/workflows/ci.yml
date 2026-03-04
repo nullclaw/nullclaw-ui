@@ -29,3 +29,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Package release artifacts (smoke)
+        run: bash ./scripts/package-release.sh "v0.0.0-ci" release
+
+      - name: Verify release artifact layout
+        run: bash ./scripts/verify-release-package.sh "v0.0.0-ci" release

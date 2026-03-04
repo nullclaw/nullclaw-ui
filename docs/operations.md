@@ -50,9 +50,10 @@ Security expectations:
 3. Manual verification of pairing, chat, approvals, logout.
 4. Build production bundle.
 5. Verify CLI startup: `npm run cli -- run --host 127.0.0.1 --port 4173`.
-6. Tag a release: `git tag vYYYY.M.D && git push origin vYYYY.M.D`.
-7. Confirm GitHub Actions `Release` workflow attached `.tar.gz` and `.zip` assets.
-8. Confirm diagnostics panel reflects actual E2E/runtime details.
+6. Validate release archive layout: `bash ./scripts/package-release.sh vX.Y.Z release && bash ./scripts/verify-release-package.sh vX.Y.Z release`.
+7. Tag a release: `git tag vYYYY.M.D && git push origin vYYYY.M.D`.
+8. Confirm GitHub Actions `Release` workflow attached `.tar.gz` and `.zip` assets.
+9. Confirm diagnostics panel reflects actual E2E/runtime details.
 
 ## GitHub Release Artifacts
 
