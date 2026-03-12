@@ -148,7 +148,6 @@
       onkeydown={handleKeydown}
       placeholder="enter_command..."
       rows="1"
-      disabled={isStreaming}
       class="text-glow"
     ></textarea>
     <button type="submit" disabled={!input.trim() || isStreaming}>

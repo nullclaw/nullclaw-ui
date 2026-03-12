@@ -21,4 +21,28 @@ describe("ChatScreen", () => {
     expect(text).toContain("wss://host.example/ws?token=***&foo=bar");
     expect(text).not.toContain("super-secret");
   });
+
+  it("keeps the textarea editable while assistant is streaming", () => {
+    const { container } = render(ChatScreen, {
+      props: {
+        messages: [],
+        toolCalls: [],
+        approvals: [],
+        error: null,
+        isStreaming: true,
+        endpointUrl: "wss://host.example/ws",
+        onSend: vi.fn(),
+        onApproval: vi.fn(),
+      },
+    });
+
+    const textarea = container.querySelector("textarea");
+    const submit = container.querySelector('button[type="submit"]');
+
+    expect(textarea).not.toBeNull();
+    expect(textarea instanceof HTMLTextAreaElement).toBe(true);
+    expect(textarea?.hasAttribute("disabled")).toBe(false);
+    expect(submit instanceof HTMLButtonElement).toBe(true);
+    expect((submit as HTMLButtonElement | null)?.disabled).toBe(true);
+  });
 });
