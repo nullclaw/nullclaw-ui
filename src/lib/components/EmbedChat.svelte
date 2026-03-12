@@ -2,8 +2,17 @@
   import { onMount } from 'svelte';
   import ChatScreen from './ChatScreen.svelte';
   import { createConnectionController } from '$lib/session/connection-controller.svelte';
+  import type { ChatMessage } from '$lib/stores/session.svelte';
 
-  let { wsUrl = '', pairingCode = '123456' } = $props();
+  let {
+    wsUrl = '',
+    pairingCode = '123456',
+    initialMessages = [],
+  } = $props<{
+    wsUrl?: string;
+    pairingCode?: string;
+    initialMessages?: ChatMessage[];
+  }>();
 
   const connection = createConnectionController('embedded');
   const session = connection.session;
@@ -23,7 +32,10 @@
 
   onMount(() => {
     if (wsUrl && pairingCode) {
-      connection.connectWithPairing(wsUrl, pairingCode);
+      void connection.connectWithPairing(wsUrl, pairingCode);
+    }
+    if (initialMessages.length > 0) {
+      session.replaceHistory(initialMessages);
     }
     return () => connection.dispose();
   });

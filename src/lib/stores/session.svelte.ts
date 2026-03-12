@@ -218,6 +218,17 @@ export function createSessionStore() {
     error = null;
   }
 
+  function replaceHistory(history: ChatMessage[]) {
+    messages = history.map((message) => ({
+      ...message,
+      streaming: false,
+    }));
+    toolCalls = [];
+    approvals = [];
+    streamingMessageId = null;
+    error = null;
+  }
+
   function resolveApproval(id: string) {
     const a = approvals.find((x) => x.id === id);
     if (a) a.resolved = true;
@@ -246,6 +257,7 @@ export function createSessionStore() {
     addUserMessage,
     handleEvent,
     clear,
+    replaceHistory,
     resolveApproval,
     setError,
   };

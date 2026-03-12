@@ -146,4 +146,61 @@ describe('createSessionStore', () => {
     session.setError(null);
     expect(session.error).toBeNull();
   });
+
+  it('replaces transcript with restored history and clears transient state', () => {
+    const session = createSessionStore();
+
+    session.handleEvent(
+      makeEvent({
+        type: 'tool_call',
+        request_id: 'req-tool-1',
+        payload: { name: 'shell', arguments: { cmd: 'pwd' } },
+      }),
+    );
+    session.handleEvent(
+      makeEvent({
+        type: 'approval_request',
+        request_id: 'req-approval-1',
+        payload: { action: 'delete-file', reason: 'requested by user' },
+      }),
+    );
+    session.setError('transport error');
+
+    session.replaceHistory([
+      {
+        id: 'history-1',
+        role: 'user',
+        content: 'hello',
+        timestamp: 1,
+      },
+      {
+        id: 'history-2',
+        role: 'assistant',
+        content: 'hi',
+        timestamp: 2,
+        streaming: true,
+      },
+    ]);
+
+    expect(session.messages).toEqual([
+      {
+        id: 'history-1',
+        role: 'user',
+        content: 'hello',
+        timestamp: 1,
+        streaming: false,
+      },
+      {
+        id: 'history-2',
+        role: 'assistant',
+        content: 'hi',
+        timestamp: 2,
+        streaming: false,
+      },
+    ]);
+    expect(session.toolCalls).toHaveLength(0);
+    expect(session.approvals).toHaveLength(0);
+    expect(session.error).toBeNull();
+    expect(session.isStreaming).toBe(false);
+  });
 });
