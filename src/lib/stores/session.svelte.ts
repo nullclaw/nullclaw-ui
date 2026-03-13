@@ -7,6 +7,7 @@ export interface ChatMessage {
   role: MessageRole;
   content: string;
   timestamp: number;
+  order?: number;
   streaming?: boolean; // true while receiving chunks
   type?: string; // original event type
 }
@@ -18,6 +19,7 @@ export interface ToolCall {
   arguments: Record<string, unknown>;
   result?: { ok: boolean; result?: unknown; error?: string };
   timestamp: number;
+  order?: number;
 }
 
 export interface ApprovalRequest {
@@ -27,11 +29,17 @@ export interface ApprovalRequest {
   reason?: string;
   resolved?: boolean;
   timestamp: number;
+  order?: number;
 }
 
 let messageIdCounter = 0;
+let timelineOrderCounter = 0;
 function nextId(): string {
   return `msg-${++messageIdCounter}-${Date.now()}`;
+}
+
+function nextTimelineOrder(): number {
+  return ++timelineOrderCounter;
 }
 
 function asObject(value: unknown): Record<string, unknown> | null {
@@ -63,6 +71,7 @@ export function createSessionStore() {
       role: 'user',
       content,
       timestamp: Date.now(),
+      order: nextTimelineOrder(),
     });
     awaitingAssistant = true;
     error = null;
@@ -84,6 +93,7 @@ export function createSessionStore() {
       role: 'assistant',
       content: chunk,
       timestamp: Date.now(),
+      order: nextTimelineOrder(),
       streaming: true,
     });
     streamingMessageId = id;
@@ -103,6 +113,7 @@ export function createSessionStore() {
           role: 'assistant',
           content: finalContent,
           timestamp: Date.now(),
+          order: nextTimelineOrder(),
         });
       }
 
@@ -116,6 +127,7 @@ export function createSessionStore() {
       role: 'assistant',
       content: finalContent,
       timestamp: Date.now(),
+      order: nextTimelineOrder(),
     });
   }
 
@@ -146,6 +158,7 @@ export function createSessionStore() {
       arguments: {},
       result,
       timestamp: Date.now(),
+      order: nextTimelineOrder(),
     });
   }
 
@@ -178,6 +191,7 @@ export function createSessionStore() {
           name: asString(payload?.name) ?? 'unknown_tool',
           arguments: argumentsPayload,
           timestamp: Date.now(),
+          order: nextTimelineOrder(),
         });
         break;
       }
@@ -204,6 +218,7 @@ export function createSessionStore() {
           action: asString(payload?.action) ?? 'unknown_action',
           reason: asString(payload?.reason) ?? undefined,
           timestamp: Date.now(),
+          order: nextTimelineOrder(),
         });
         break;
       }
@@ -231,6 +246,7 @@ export function createSessionStore() {
   function replaceHistory(history: ChatMessage[]) {
     messages = history.map((message) => ({
       ...message,
+      order: message.order ?? nextTimelineOrder(),
       streaming: false,
     }));
     toolCalls = [];

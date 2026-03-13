@@ -220,6 +220,7 @@ describe('createSessionStore', () => {
         role: 'user',
         content: 'hello',
         timestamp: 1,
+        order: expect.any(Number),
         streaming: false,
       },
       {
@@ -227,6 +228,7 @@ describe('createSessionStore', () => {
         role: 'assistant',
         content: 'hi',
         timestamp: 2,
+        order: expect.any(Number),
         streaming: false,
       },
     ]);

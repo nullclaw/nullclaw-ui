@@ -53,7 +53,14 @@
       ...toolCalls.map((t) => ({ kind: "tool_call" as const, data: t })),
       ...approvals.map((a) => ({ kind: "approval" as const, data: a })),
     ];
-    items.sort((a, b) => a.data.timestamp - b.data.timestamp);
+    items.sort((a, b) => {
+      const byTimestamp = a.data.timestamp - b.data.timestamp;
+      if (byTimestamp !== 0) return byTimestamp;
+      const aOrder = a.data.order ?? 0;
+      const bOrder = b.data.order ?? 0;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return a.data.id.localeCompare(b.data.id);
+    });
     return items;
   });
 

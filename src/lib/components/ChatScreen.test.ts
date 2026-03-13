@@ -72,4 +72,38 @@ describe("ChatScreen", () => {
 
     expect(container.textContent ?? "").toContain("thinking");
   });
+
+  it("keeps deterministic history order when timestamps are identical", () => {
+    const { container } = render(ChatScreen, {
+      props: {
+        messages: [
+          {
+            id: "msg-2",
+            role: "assistant",
+            content: "second",
+            timestamp: 1000,
+            order: 2,
+          },
+          {
+            id: "msg-1",
+            role: "user",
+            content: "first",
+            timestamp: 1000,
+            order: 1,
+          },
+        ],
+        toolCalls: [],
+        approvals: [],
+        error: null,
+        isStreaming: false,
+        isAwaitingAssistant: false,
+        endpointUrl: "wss://host.example/ws",
+        onSend: vi.fn(),
+        onApproval: vi.fn(),
+      },
+    });
+
+    const text = container.textContent ?? "";
+    expect(text.indexOf("first")).toBeLessThan(text.indexOf("second"));
+  });
 });
