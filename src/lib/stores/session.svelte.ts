@@ -54,6 +54,7 @@ export function createSessionStore() {
   let toolCalls = $state<ToolCall[]>([]);
   let approvals = $state<ApprovalRequest[]>([]);
   let streamingMessageId = $state<string | null>(null);
+  let awaitingAssistant = $state(false);
   let error = $state<string | null>(null);
 
   function addUserMessage(content: string) {
@@ -63,6 +64,8 @@ export function createSessionStore() {
       content,
       timestamp: Date.now(),
     });
+    awaitingAssistant = true;
+    error = null;
   }
 
   function appendAssistantChunk(chunk: string) {
@@ -152,6 +155,7 @@ export function createSessionStore() {
 
     switch (event.type) {
       case 'assistant_chunk': {
+        awaitingAssistant = false;
         const content = asString(payload?.content) ?? asString(event.content) ?? '';
         if (!content) break;
         appendAssistantChunk(content);
@@ -159,12 +163,14 @@ export function createSessionStore() {
       }
 
       case 'assistant_final': {
+        awaitingAssistant = false;
         const content = asString(payload?.content) ?? asString(event.content);
         finalizeAssistantMessage(content);
         break;
       }
 
       case 'tool_call': {
+        awaitingAssistant = false;
         const argumentsPayload = asObject(payload?.arguments) ?? {};
         toolCalls.push({
           id: nextId(),
@@ -177,12 +183,14 @@ export function createSessionStore() {
       }
 
       case 'tool_result': {
+        awaitingAssistant = false;
         if (!payload) break;
         applyToolResult(event, payload);
         break;
       }
 
       case 'approval_request': {
+        awaitingAssistant = false;
         if (
           event.request_id &&
           approvals.some((approval) => approval.requestId === event.request_id && !approval.resolved)
@@ -203,6 +211,7 @@ export function createSessionStore() {
       case 'error': {
         // If streaming was in progress, terminate the in-flight assistant message
         // so the UI does not stay blocked waiting for an absent final chunk.
+        awaitingAssistant = false;
         finalizeAssistantMessage(null);
         error = asString(payload?.message) ?? 'Unknown error';
         break;
@@ -215,6 +224,7 @@ export function createSessionStore() {
     toolCalls = [];
     approvals = [];
     streamingMessageId = null;
+    awaitingAssistant = false;
     error = null;
   }
 
@@ -226,6 +236,7 @@ export function createSessionStore() {
     toolCalls = [];
     approvals = [];
     streamingMessageId = null;
+    awaitingAssistant = false;
     error = null;
   }
 
@@ -253,6 +264,9 @@ export function createSessionStore() {
     },
     get isStreaming() {
       return streamingMessageId !== null;
+    },
+    get isAwaitingAssistant() {
+      return awaitingAssistant;
     },
     addUserMessage,
     handleEvent,

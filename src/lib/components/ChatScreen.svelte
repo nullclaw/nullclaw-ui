@@ -16,6 +16,7 @@
     approvals: ApprovalRequest[];
     error: string | null;
     isStreaming: boolean;
+    isAwaitingAssistant: boolean;
     endpointUrl: string;
     onSend: (content: string) => void;
     onApproval: (
@@ -31,6 +32,7 @@
     approvals,
     error,
     isStreaming,
+    isAwaitingAssistant,
     endpointUrl,
     onSend,
     onApproval,
@@ -58,11 +60,12 @@
   const safeEndpointUrl = $derived(
     redactWebSocketAuthToken(endpointUrl) ?? endpointUrl,
   );
+  const isBusy = $derived(isStreaming || isAwaitingAssistant);
 
   function handleSubmit(e: Event) {
     e.preventDefault();
     const trimmed = input.trim();
-    if (!trimmed || isStreaming) return;
+    if (!trimmed || isBusy) return;
     onSend(trimmed);
     input = "";
   }
@@ -76,7 +79,7 @@
 
   $effect(() => {
     if (messages.length || toolCalls.length || approvals.length) {
-      messagesEnd?.scrollIntoView({ behavior: "smooth" });
+      messagesEnd?.scrollIntoView?.({ behavior: "smooth" });
     }
   });
 
@@ -133,6 +136,12 @@
           <ApprovalPrompt approval={item.data} onRespond={onApproval} />
         {/if}
       {/each}
+      {#if isAwaitingAssistant && !isStreaming}
+        <div class="awaiting-indicator">
+          <span class="awaiting-prefix">assistant@nullclaw:~$</span>
+          <span class="awaiting-label">thinking<span class="dot-blink">...</span></span>
+        </div>
+      {/if}
     {/if}
     <div bind:this={messagesEnd}></div>
   </div>
@@ -150,7 +159,7 @@
       rows="1"
       class="text-glow"
     ></textarea>
-    <button type="submit" disabled={!input.trim() || isStreaming}>
+    <button type="submit" disabled={!input.trim() || isBusy}>
       EXEC
     </button>
   </form>
@@ -173,6 +182,29 @@
     flex-direction: column;
     gap: 8px;
     scroll-behavior: smooth;
+  }
+
+  .awaiting-indicator {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.9rem;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    color: var(--fg-dim);
+    background: rgba(0, 0, 0, 0.18);
+    text-shadow: var(--text-glow);
+  }
+
+  .awaiting-prefix {
+    color: var(--accent);
+    opacity: 0.85;
+  }
+
+  .awaiting-label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 
   /* Empty State Styling */

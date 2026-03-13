@@ -147,6 +147,38 @@ describe('createSessionStore', () => {
     expect(session.error).toBeNull();
   });
 
+  it('tracks waiting-for-response state before the first assistant event', () => {
+    const session = createSessionStore();
+
+    session.addUserMessage('hello');
+    expect(session.isAwaitingAssistant).toBe(true);
+    expect(session.isStreaming).toBe(false);
+
+    session.handleEvent(
+      makeEvent({ type: 'assistant_chunk', payload: { content: 'hi' } }),
+    );
+
+    expect(session.isAwaitingAssistant).toBe(false);
+    expect(session.isStreaming).toBe(true);
+  });
+
+  it('clears waiting-for-response state when a tool call starts first', () => {
+    const session = createSessionStore();
+
+    session.addUserMessage('check something');
+    expect(session.isAwaitingAssistant).toBe(true);
+
+    session.handleEvent(
+      makeEvent({
+        type: 'tool_call',
+        request_id: 'req-1',
+        payload: { name: 'shell', arguments: { cmd: 'pwd' } },
+      }),
+    );
+
+    expect(session.isAwaitingAssistant).toBe(false);
+  });
+
   it('replaces transcript with restored history and clears transient state', () => {
     const session = createSessionStore();
 

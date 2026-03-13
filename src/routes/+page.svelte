@@ -93,6 +93,7 @@
       approvals={session.approvals}
       error={session.error}
       isStreaming={session.isStreaming}
+      isAwaitingAssistant={session.isAwaitingAssistant}
       {endpointUrl}
       onSend={handleSend}
       onApproval={handleApproval}

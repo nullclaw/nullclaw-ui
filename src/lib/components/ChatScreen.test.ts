@@ -11,6 +11,7 @@ describe("ChatScreen", () => {
         approvals: [],
         error: null,
         isStreaming: false,
+        isAwaitingAssistant: false,
         endpointUrl: "wss://host.example/ws?token=super-secret&foo=bar",
         onSend: vi.fn(),
         onApproval: vi.fn(),
@@ -30,6 +31,7 @@ describe("ChatScreen", () => {
         approvals: [],
         error: null,
         isStreaming: true,
+        isAwaitingAssistant: false,
         endpointUrl: "wss://host.example/ws",
         onSend: vi.fn(),
         onApproval: vi.fn(),
@@ -44,5 +46,30 @@ describe("ChatScreen", () => {
     expect(textarea?.hasAttribute("disabled")).toBe(false);
     expect(submit instanceof HTMLButtonElement).toBe(true);
     expect((submit as HTMLButtonElement | null)?.disabled).toBe(true);
+  });
+
+  it("shows a thinking indicator before the first assistant token arrives", () => {
+    const { container } = render(ChatScreen, {
+      props: {
+        messages: [
+          {
+            id: "msg-1",
+            role: "user",
+            content: "hello",
+            timestamp: 1,
+          },
+        ],
+        toolCalls: [],
+        approvals: [],
+        error: null,
+        isStreaming: false,
+        isAwaitingAssistant: true,
+        endpointUrl: "wss://host.example/ws",
+        onSend: vi.fn(),
+        onApproval: vi.fn(),
+      },
+    });
+
+    expect(container.textContent ?? "").toContain("thinking");
   });
 });
