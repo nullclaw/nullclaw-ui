@@ -8,10 +8,14 @@
     wsUrl = '',
     pairingCode = '123456',
     initialMessages = [],
+    autoSendMessage = '',
+    onAutoSend,
   } = $props<{
     wsUrl?: string;
     pairingCode?: string;
     initialMessages?: ChatMessage[];
+    autoSendMessage?: string;
+    onAutoSend?: (() => void) | undefined;
   }>();
 
   const connection = createConnectionController('embedded');
@@ -21,6 +25,8 @@
   const isPaired = $derived(connection.isPaired);
   const endpointUrl = $derived(connection.endpointUrl);
   const pairingError = $derived(connection.pairingError);
+  const trimmedAutoSendMessage = $derived(autoSendMessage.trim());
+  let autoSendTriggered = $state(false);
 
   function handleSend(content: string) {
     connection.sendMessage(content);
@@ -29,6 +35,19 @@
   function handleApproval(id: string, requestId: string | undefined, approved: boolean) {
     connection.sendApproval(id, requestId, approved);
   }
+
+  $effect(() => {
+    if (autoSendTriggered) return;
+    if (!isPaired) return;
+    if (!trimmedAutoSendMessage) return;
+    if (initialMessages.length > 0) return;
+
+    const sent = connection.sendMessage(trimmedAutoSendMessage);
+    if (!sent) return;
+
+    autoSendTriggered = true;
+    onAutoSend?.();
+  });
 
   onMount(() => {
     if (wsUrl && pairingCode) {
