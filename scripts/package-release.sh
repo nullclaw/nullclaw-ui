@@ -11,6 +11,9 @@ rm -rf "${OUTDIR}"
 mkdir -p "${PKG_DIR}/bin"
 
 cp -R build "${PKG_DIR}/build"
+if [[ -d dist ]]; then
+  cp -R dist/. "${PKG_DIR}/"
+fi
 cp bin/nullclaw-chat-ui.js "${PKG_DIR}/bin/nullclaw-chat-ui.js"
 cp package.json "${PKG_DIR}/package.json"
 cp README.md "${PKG_DIR}/README.md"

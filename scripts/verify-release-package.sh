@@ -57,6 +57,7 @@ required_entries=(
 	"nullclaw-chat-ui/nullclaw-chat-ui"
 	"nullclaw-chat-ui/nullclaw-chat-ui.cmd"
 	"nullclaw-chat-ui/bin/nullclaw-chat-ui.js"
+	"nullclaw-chat-ui/module.js"
 	"nullclaw-chat-ui/build/index.html"
 )
 
